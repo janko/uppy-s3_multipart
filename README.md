@@ -96,9 +96,14 @@ Finally, in your Uppy configuration pass your app's URL as the `serverUrl`:
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: "https://your-app.com/",
+  serverUrl: 'https://your-app.com/',
 })
 ```
+
+**See [Adding Direct S3 Uploads] for an example of a complete Uppy setup with
+Shrine. From there you can just swap the `AwsS3` Uppy plugin for the
+`AwsS3Multipart` plugin, and `presign_endpoint` Shrine plugin for the
+`uppy_s3_multipart` plugin.**
 
 Both the plugin and method accepts `:options` for specifying additional options
 to the aws-sdk calls (read further for more details on these options):
@@ -301,6 +306,7 @@ License](https://opensource.org/licenses/MIT).
 
 [AwsS3Multipart]: https://uppy.io/docs/aws-s3-multipart/
 [Shrine]: https://shrinerb.com
+[Adding Direct S3 Uploads]: https://github.com/shrinerb/shrine/wiki/Adding-Direct-S3-Uploads
 [`Aws::S3::Client#create_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#create_multipart_upload-instance_method
 [`Aws::S3::Client#list_parts`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#list_parts-instance_method
 [`Aws::S3::Client#upload_part`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#upload_part-instance_method

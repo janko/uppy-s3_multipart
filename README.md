@@ -15,31 +15,37 @@ gem "uppy-s3_multipart"
 
 ## Setup
 
-Once you've created your S3 bucket, you need to set up CORS for it. The
-following script sets up minimal CORS configuration needed for multipart
-uploads on your bucket using the `aws-sdk-s3` gem:
+In order to allow direct multipart uploads to your S3 bucket, we need to update
+the bucket's CORS configuration. In the AWS S3 Console go to your bucket, click
+on "Permissions" tab and then on "CORS configuration". There paste in the
+following:
 
-```rb
-require "aws-sdk-s3"
-
-client = Aws::S3::Client.new(
-  access_key_id:     "<YOUR KEY>",
-  secret_access_key: "<YOUR SECRET>",
-  region:            "<REGION>",
-)
-
-client.put_bucket_cors(
-  bucket: "<YOUR BUCKET>",
-  cors_configuration: {
-    cors_rules: [{
-      allowed_headers: ["Authorization", "Content-Type", "Origin", "ETag"],
-      allowed_methods: ["GET", "POST", "PUT", "DELETE"],
-      allowed_origins: ["*"],
-      max_age_seconds: 3000,
-    }]
-  }
-)
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <CORSRule>
+    <AllowedOrigin>https://my-app.com</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+    <AllowedMethod>POST</AllowedMethod>
+    <AllowedMethod>PUT</AllowedMethod>
+    <MaxAgeSeconds>3000</MaxAgeSeconds>
+    <AllowedHeader>Authorization</AllowedHeader>
+    <AllowedHeader>x-amz-date</AllowedHeader>
+    <AllowedHeader>x-amz-content-sha256</AllowedHeader>
+    <AllowedHeader>content-type</AllowedHeader>
+    <ExposeHeader>ETag</ExposeHeader>
+  </CORSRule>
+  <CORSRule>
+    <AllowedOrigin>*</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+    <MaxAgeSeconds>3000</MaxAgeSeconds>
+  </CORSRule>
+</CORSConfiguration>
 ```
+
+Replace `https://my-app.com` with the URL to your app (in development you can
+set this to `*`). Once you've clicked `Save`, it may take some time for the
+new CORS settings to be applied.
 
 ## Usage
 

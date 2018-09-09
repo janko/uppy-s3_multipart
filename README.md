@@ -200,7 +200,7 @@ Initiates a new multipart upload.
 
 ```rb
 client.create_multipart_upload(key: "foo", **options)
-#=> { upload_id: "MultipartUploadId", key: "foo" }
+# => { upload_id: "MultipartUploadId", key: "foo" }
 ```
 
 Accepts:
@@ -219,9 +219,9 @@ Retrieves currently uploaded parts of a multipart upload.
 
 ```rb
 client.list_parts(upload_id: "MultipartUploadId", key: "foo", **options)
-#=> [ { part_number: 1, size: 5402383, etag: "etag1" },
-#     { part_number: 2, size: 5982742, etag: "etag2" },
-#     ... ]
+# => [ { part_number: 1, size: 5402383, etag: "etag1" },
+#      { part_number: 2, size: 5982742, etag: "etag2" },
+#      ... ]
 ```
 
 Accepts:
@@ -244,7 +244,7 @@ Returns the endpoint that should be used for uploading a new multipart part.
 
 ```rb
 client.prepare_upload_part(upload_id: "MultipartUploadId", key: "foo", part_number: 1, **options)
-#=> { url: "https://my-bucket.s3.amazonaws.com/foo?partNumber=1&uploadId=MultipartUploadId&..." }
+# => { url: "https://my-bucket.s3.amazonaws.com/foo?partNumber=1&uploadId=MultipartUploadId&..." }
 ```
 
 Accepts:
@@ -264,7 +264,7 @@ Finalizes the multipart upload and returns URL to the object.
 
 ```rb
 client.complete_multipart_upload(upload_id: upload_id, key: key, parts: [{ part_number: 1, etag: "etag1" }], **options)
-#=> { location: "https://my-bucket.s3.amazonaws.com/foo?..." }
+# => { location: "https://my-bucket.s3.amazonaws.com/foo?..." }
 ```
 
 Accepts:
@@ -284,7 +284,7 @@ Aborts the multipart upload, removing all parts uploaded so far.
 
 ```rb
 client.abort_multipart_upload(upload_id: upload_id, key: key, **options)
-#=> {}
+# => {}
 ```
 
 Accepts:

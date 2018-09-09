@@ -44,8 +44,8 @@ following:
 ```
 
 Replace `https://my-app.com` with the URL to your app (in development you can
-set this to `*`). Once you've clicked `Save`, it may take some time for the
-new CORS settings to be applied.
+set this to `*`). Once you've hit "Save", it may take some time for the new
+CORS settings to be applied.
 
 ## Usage
 

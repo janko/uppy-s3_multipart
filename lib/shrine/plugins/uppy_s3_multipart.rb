@@ -1,7 +1,5 @@
 require "uppy/s3_multipart"
 
-require "securerandom"
-
 class Shrine
   module Plugins
     module UppyS3Multipart

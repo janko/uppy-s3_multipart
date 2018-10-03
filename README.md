@@ -126,6 +126,11 @@ Shrine.uppy_s3_multipart(:cache, options: {
 })
 ```
 
+NOTE: By default **Shrine won't extract metadata from directly upload files**,
+instead it will just copy metadata that was extracted on the client side. See
+[this section][metadata direct uploads] for the rationale and instructions on
+how to opt in.
+
 ### Standalone
 
 You can also initialize `Uppy::S3Multipart::App` directly:
@@ -319,3 +324,4 @@ License](https://opensource.org/licenses/MIT).
 [`Aws::S3::Presigner#presigned_url`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Presigner.html#presigned_url-instance_method
 [`Aws::S3::Client#complete_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#complete_multipart_upload-instance_method
 [`Aws::S3::Client#abort_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#abort_multipart_upload-instance_method
+[metadata direct uploads]: https://github.com/shrinerb/shrine/blob/master/doc/metadata.md#direct-uploads

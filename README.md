@@ -97,12 +97,13 @@ POST   /s3/multipart/:uploadId/complete
 DELETE /s3/multipart/:uploadId
 ```
 
-Finally, in your Uppy configuration pass your app's URL as the `serverUrl`:
+Finally, in your Uppy configuration set `serverUrl` to your app's URL or an
+empty string:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: 'https://your-app.com/',
+  serverUrl: '', // uses relative URLs (pass 'https://your-app.com' for absolute URLs)
 })
 ```
 
@@ -163,12 +164,13 @@ map "/s3" do
 end
 ```
 
-In your Uppy configuration point the `serverUrl` to your application:
+In your Uppy configuration set `serverUrl` to your app's URL or an empty
+string:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: "https://your-app.com/",
+  serverUrl: '', // uses relative URLs (pass 'https://your-app.com' for absolute URLs)
 })
 ```
 

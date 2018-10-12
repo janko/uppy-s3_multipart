@@ -172,6 +172,19 @@ string:
 uppy.use(Uppy.AwsS3Multipart, {
   serverUrl: '', // uses relative URLs (pass 'https://your-app.com' for absolute URLs)
 })
+
+uppy.on('upload-success', function (file, data, uploadURL) {
+  var uploadedFileData = JSON.stringify({
+    id: uploadURL.match(/\/cache\/([^\?]+)/)[1], // extract key without prefix
+    storage: 'cache',
+    metadata: {
+      size:      file.size,
+      filename:  file.name,
+      mime_type: file.type,
+    }
+  })
+  // ...
+})
 ```
 
 The `Uppy::S3Mutipart::App` initializer accepts `:options` for specifying

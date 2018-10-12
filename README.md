@@ -97,20 +97,31 @@ POST   /s3/multipart/:uploadId/complete
 DELETE /s3/multipart/:uploadId
 ```
 
-Finally, in your Uppy configuration set `serverUrl` to your app's URL or an
-empty string:
+Finally, in your Uppy configuration set `serverUrl` to your app's URL:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: '', // uses relative URLs (pass 'https://your-app.com' for absolute URLs)
+  serverUrl: window.location.origin, // your application
+})
+
+uppy.on('upload-success', function (file, data, uploadURL) {
+  var uploadedFileData = JSON.stringify({
+    id: uploadURL.match(/\/cache\/([^\?]+)/)[1], // extract key without prefix
+    storage: 'cache',
+    metadata: {
+      size:      file.size,
+      filename:  file.name,
+      mime_type: file.type,
+    }
+  })
+  // ...
 })
 ```
 
 **See [Adding Direct S3 Uploads] for an example of a complete Uppy setup with
-Shrine. From there you can just swap the `AwsS3` Uppy plugin for the
-`AwsS3Multipart` plugin, and `presign_endpoint` Shrine plugin for the
-`uppy_s3_multipart` plugin.**
+Shrine. From there you can swap the `presign_endpoint` + `AwsS3` code with the
+`uppy_s3_multipart` + `AwsS3Multipart` setup.**
 
 Both the plugin and method accepts `:options` for specifying additional options
 to the aws-sdk calls (read further for more details on these options):
@@ -134,7 +145,8 @@ instructions on how to opt in.
 
 ### Standalone
 
-You can also initialize `Uppy::S3Multipart::App` directly:
+You can also use `uppy-s3_multipart` without Shrine. Start by initializing the
+`Uppy::S3Multipart::App` directly:
 
 ```rb
 require "uppy/s3_multipart"
@@ -164,26 +176,12 @@ map "/s3" do
 end
 ```
 
-In your Uppy configuration set `serverUrl` to your app's URL or an empty
-string:
+In your Uppy configuration set `serverUrl` to your app's URL:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: window.location.origin, // current scheme + host + port
-})
-
-uppy.on('upload-success', function (file, data, uploadURL) {
-  var uploadedFileData = JSON.stringify({
-    id: uploadURL.match(/\/cache\/([^\?]+)/)[1], // extract key without prefix
-    storage: 'cache',
-    metadata: {
-      size:      file.size,
-      filename:  file.name,
-      mime_type: file.type,
-    }
-  })
-  // ...
+  serverUrl: window.location.origin, // your application
 })
 ```
 

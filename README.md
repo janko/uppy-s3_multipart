@@ -170,7 +170,7 @@ string:
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: '', // uses relative URLs (pass 'https://your-app.com' for absolute URLs)
+  serverUrl: window.location.origin, // current scheme + host + port
 })
 
 uppy.on('upload-success', function (file, data, uploadURL) {

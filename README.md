@@ -97,12 +97,12 @@ POST   /s3/multipart/:uploadId/complete
 DELETE /s3/multipart/:uploadId
 ```
 
-Finally, in your Uppy configuration set `serverUrl` to your app's URL:
+Finally, in your Uppy configuration point `serverUrl` to your app's URL:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: window.location.origin, // your application
+  serverUrl: '/',
 })
 
 uppy.on('upload-success', function (file, data, uploadURL) {
@@ -176,12 +176,12 @@ map "/s3" do
 end
 ```
 
-In your Uppy configuration set `serverUrl` to your app's URL:
+In your Uppy configuration point `serverUrl` to your app's URL:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: window.location.origin, // your application
+  serverUrl: '/',
 })
 ```
 

@@ -20,5 +20,6 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency "minitest"
   gem.add_development_dependency "rack-test_app"
   gem.add_development_dependency "shrine", "~> 2.0"
+  gem.add_development_dependency "shrine-memory"
   gem.add_development_dependency "aws-sdk-core", "~> 3.23"
 end

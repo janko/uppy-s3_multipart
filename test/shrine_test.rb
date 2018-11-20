@@ -1,7 +1,10 @@
 require "test_helper"
+
 require "shrine"
 require "shrine/plugins/uppy_s3_multipart"
 require "shrine/storage/s3"
+require "shrine/storage/memory"
+
 require "rack/test_app"
 
 describe Shrine::Plugins::UppyS3Multipart do
@@ -68,5 +71,20 @@ describe Shrine::Plugins::UppyS3Multipart do
 
     assert_equal :create_multipart_upload, client.api_requests[0][:operation_name]
     assert_equal "public-read",            client.api_requests[0][:params][:acl]
+  end
+
+  it "works for subclass of S3 storage" do
+    @shrine.storages[:s3] = Class.new(Shrine::Storage::S3).new(
+      bucket:         "my-bucket",
+      stub_responses: true,
+    )
+
+    @shrine.uppy_s3_multipart(:s3)
+  end
+
+  it "fails for non-S3 storage" do
+    @shrine.storages[:memory] = Shrine::Storage::Memory.new
+
+    assert_raises(Shrine::Error) { @shrine.uppy_s3_multipart(:memory) }
   end
 end

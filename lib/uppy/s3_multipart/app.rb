@@ -24,10 +24,14 @@ module Uppy
         plugin :json
         plugin :json_parser
         plugin :halt
+        plugin :path_rewriter
+
+        # allow mounting on "/s3" for backwards compatibility
+        rewrite_path "/multipart", ""
 
         route do |r|
-          # POST /multipart
-          r.post "multipart" do
+          # POST /s3/multipart
+          r.post true do
             content_type = r.params["type"]
             filename     = r.params["filename"]
 
@@ -43,8 +47,8 @@ module Uppy
             { uploadId: result.fetch(:upload_id), key: result.fetch(:key) }
           end
 
-          # GET /multipart/:uploadId
-          r.get "multipart", String do |upload_id|
+          # GET /s3/multipart/:uploadId
+          r.get String do |upload_id|
             key = param!("key")
 
             result = client_call(:list_parts, upload_id: upload_id, key: key)
@@ -54,8 +58,8 @@ module Uppy
             end
           end
 
-          # GET /multipart/:uploadId/:partNumber
-          r.get "multipart", String, String do |upload_id, part_number|
+          # GET /s3/multipart/:uploadId/:partNumber
+          r.get String, String do |upload_id, part_number|
             key = param!("key")
 
             result = client_call(:prepare_upload_part, upload_id: upload_id, key: key, part_number: part_number)
@@ -63,8 +67,8 @@ module Uppy
             { url: result.fetch(:url) }
           end
 
-          # POST /multipart/:uploadId/complete
-          r.post "multipart", String, "complete" do |upload_id|
+          # POST /s3/multipart/:uploadId/complete
+          r.post String, "complete" do |upload_id|
             key   = param!("key")
             parts = param!("parts")
 
@@ -81,8 +85,8 @@ module Uppy
             { location: result.fetch(:location) }
           end
 
-          # DELETE /multipart/:uploadId
-          r.delete "multipart", String do |upload_id|
+          # DELETE /s3/multipart/:uploadId
+          r.delete String do |upload_id|
             key = param!("key")
 
             client_call(:abort_multipart_upload, upload_id: upload_id, key: key)

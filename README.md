@@ -78,11 +78,11 @@ inside your main application:
 ```rb
 # Rails (config/routes.rb)
 Rails.application.routes.draw do
-  mount Shrine.uppy_s3_multipart(:cache) => "/s3"
+  mount Shrine.uppy_s3_multipart(:cache) => "/s3/multipart"
 end
 
 # Rack (config.ru)
-map "/s3" do
+map "/s3/multipart" do
   run Shrine.uppy_s3_multipart(:cache)
 end
 ```
@@ -167,11 +167,11 @@ and mount it in your app in the same way:
 ```rb
 # Rails (config/routes.rb)
 Rails.application.routes.draw do
-  mount UPPY_S3_MULTIPART_APP => "/s3"
+  mount UPPY_S3_MULTIPART_APP => "/s3/multipart"
 end
 
 # Rack (config.ru)
-map "/s3" do
+map "/s3/multipart" do
   run UPPY_S3_MULTIPART_APP
 end
 ```

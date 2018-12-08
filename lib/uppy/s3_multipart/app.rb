@@ -80,7 +80,7 @@ module Uppy
               begin
                 { part_number: part.fetch("PartNumber"), etag: part.fetch("ETag") }
               rescue KeyError
-                r.halt 400, { error: "At least one part is missing \"PartNumber\" or \"ETag\" field" }
+                error! "At least one part is missing \"PartNumber\" or \"ETag\" field"
               end
             end
 
@@ -115,9 +115,13 @@ module Uppy
         def param!(name)
           value = request.params[name]
 
-          request.halt 400, { error: "Missing \"#{name}\" parameter" } if value.nil?
+          error! "Missing \"#{name}\" parameter" if value.nil?
 
           value
+        end
+
+        def error!(message)
+          request.halt 400, { error: message }
         end
       end
     end

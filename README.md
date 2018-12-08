@@ -56,14 +56,14 @@ directly.
 
 ### Shrine
 
-In the initializer load the `uppy_s3_multipart` plugin:
+In your Shrine initializer load the `uppy_s3_multipart` plugin:
 
 ```rb
 require "shrine"
 require "shrine/storage/s3"
 
 Shrine.storages = {
-  cache: Shrine::Storage::S3.new(...),
+  cache: Shrine::Storage::S3.new(prefix: "cache", ...),
   store: Shrine::Storage::S3.new(...),
 }
 
@@ -97,14 +97,20 @@ POST   /s3/multipart/:uploadId/complete
 DELETE /s3/multipart/:uploadId
 ```
 
-Finally, in your Uppy configuration point `serverUrl` to your app's URL:
+Now in your Uppy configuration point `serverUrl` to your app's URL:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
   serverUrl: '/',
 })
+```
 
+In the `upload-success` Uppy callback you can then construct the Shrine
+uploaded file data (this example assumes your temporary Shrine S3 storage has
+`prefix: "cache"` set):
+
+```js
 uppy.on('upload-success', function (file, data, uploadURL) {
   var uploadedFileData = JSON.stringify({
     id: uploadURL.match(/\/cache\/([^\?]+)/)[1], // extract key without prefix
@@ -123,8 +129,14 @@ uppy.on('upload-success', function (file, data, uploadURL) {
 Shrine. From there you can swap the `presign_endpoint` + `AwsS3` code with the
 `uppy_s3_multipart` + `AwsS3Multipart` setup.**
 
-Both the plugin and method accepts `:options` for specifying additional options
-to the aws-sdk calls (read further for more details on these options):
+Note that by default **Shrine won't extract metadata from directly upload
+files**, instead it will just copy metadata that was extracted on the client
+side. See [this section][metadata direct uploads] for the rationale and
+instructions on how to opt in.
+
+Both the plugin and method accept `:options` for specifying additional options
+to the S3 client operations (see the [Client](#client) section for list of
+operations and options they accept):
 
 ```rb
 Shrine.plugin :uppy_s3_multipart, options: {
@@ -138,14 +150,11 @@ Shrine.uppy_s3_multipart(:cache, options: {
 })
 ```
 
-Note that by default **Shrine won't extract metadata from directly upload
-files**, instead it will just copy metadata that was extracted on the client
-side. See [this section][metadata direct uploads] for the rationale and
-instructions on how to opt in.
+In the dynamic version the yielded object is an instance of [`Rack::Request`].
 
-### Standalone
+### App
 
-You can also use `uppy-s3_multipart` without Shrine. Start by initializing the
+You can also use `uppy-s3_multipart` without Shrine, by initializing the
 `Uppy::S3Multipart::App` directly:
 
 ```rb
@@ -162,7 +171,7 @@ bucket = resource.bucket("my-bucket")
 UPPY_S3_MULTIPART_APP = Uppy::S3Multipart::App.new(bucket: bucket)
 ```
 
-and mount it in your app in the same way:
+You can mount it inside your main app in the same way:
 
 ```rb
 # Rails (config/routes.rb)
@@ -186,24 +195,26 @@ uppy.use(Uppy.AwsS3Multipart, {
 ```
 
 The `Uppy::S3Mutipart::App` initializer accepts `:options` for specifying
-additional options to the aws-sdk calls (read further for more details on these
-options):
+additional options to the S3 client operations (see the [Client](#client)
+section for list of operations and options they accept):
 
 ```rb
 Uppy::S3Multipart::App.new(bucket: bucket, options: {
-  create_multipart_upload: { acl: "public-read" }
+  create_multipart_upload: { acl: "public-read" } # static
 })
 
 # OR
 
 Uppy::S3Multipart::App.new(bucket: bucket, options: {
-  create_multipart_upload: -> (request) { { acl: "public-read" } }
+  create_multipart_upload: -> (request) { { acl: "public-read" } } # dynamic
 })
 ```
 
-### Custom implementation
+In the dynamic version the yielded object is an instance of [`Rack::Request`].
 
-If you would rather implement the endpoints yourself, you can utilize
+### Client
+
+If you would rather implement the endpoints yourself, you can utilize the
 `Uppy::S3Multipart::Client` to make S3 requests.
 
 ```rb
@@ -223,13 +234,13 @@ client.create_multipart_upload(key: "foo", **options)
 
 Accepts:
 
-* `:key` -- object key
+* `:key` – object key
 * additional options for [`Aws::S3::Client#create_multipart_upload`]
 
 Returns:
 
-* `:upload_id` -- id of the created multipart upload
-* `:key` -- object key
+* `:upload_id` – id of the created multipart upload
+* `:key` – object key
 
 #### `#list_parts`
 
@@ -244,17 +255,17 @@ client.list_parts(upload_id: "MultipartUploadId", key: "foo", **options)
 
 Accepts:
 
-* `:upload_id` -- multipart upload id
-* `:key` -- object key
+* `:upload_id` – multipart upload id
+* `:key` – object key
 * additional options for [`Aws::S3::Client#list_parts`]
 
 Returns:
 
 * array of parts
 
-  - `:part_number` -- position of the part
-  - `:size` -- filesize of the part
-  - `:etag` -- etag of the part
+  - `:part_number` – position of the part
+  - `:size` – filesize of the part
+  - `:etag` – etag of the part
 
 #### `#prepare_upload_part`
 
@@ -267,14 +278,14 @@ client.prepare_upload_part(upload_id: "MultipartUploadId", key: "foo", part_numb
 
 Accepts:
 
-* `:upload_id` -- multipart upload id
-* `:key` -- object key
-* `:part_number` -- number of the next part
+* `:upload_id` – multipart upload id
+* `:key` – object key
+* `:part_number` – number of the next part
 * additional options for [`Aws::S3::Client#upload_part`] and [`Aws::S3::Presigner#presigned_url`]
 
 Returns:
 
-* `:url` -- endpoint that should be used for uploading a new multipart part via a `PUT` request
+* `:url` – endpoint that should be used for uploading a new multipart part via a `PUT` request
 
 #### `#complete_multipart_upload`
 
@@ -287,14 +298,14 @@ client.complete_multipart_upload(upload_id: upload_id, key: key, parts: [{ part_
 
 Accepts:
 
-* `:upload_id` -- multipart upload id
-* `:key` -- object key
-* `:parts` -- list of all uploaded parts, consisting of `:part_number` and `:etag`
+* `:upload_id` – multipart upload id
+* `:key` – object key
+* `:parts` – list of all uploaded parts, consisting of `:part_number` and `:etag`
 * additional options for [`Aws::S3::Client#complete_multipart_upload`]
 
 Returns:
 
-* `:location` -- URL to the uploaded object
+* `:location` – URL to the uploaded object
 
 #### `#abort_multipart_upload`
 
@@ -307,8 +318,8 @@ client.abort_multipart_upload(upload_id: upload_id, key: key, **options)
 
 Accepts:
 
-* `:upload_id` -- multipart upload id
-* `:key` -- object key
+* `:upload_id` – multipart upload id
+* `:key` – object key
 * additional options for [`Aws::S3::Client#abort_multipart_upload`]
 
 ## Contributing
@@ -331,6 +342,7 @@ License](https://opensource.org/licenses/MIT).
 [AwsS3Multipart]: https://uppy.io/docs/aws-s3-multipart/
 [Shrine]: https://shrinerb.com
 [Adding Direct S3 Uploads]: https://github.com/shrinerb/shrine/wiki/Adding-Direct-S3-Uploads
+[`Rack::Request`]: https://www.rubydoc.info/github/rack/rack/master/Rack/Request
 [`Aws::S3::Client#create_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#create_multipart_upload-instance_method
 [`Aws::S3::Client#list_parts`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#list_parts-instance_method
 [`Aws::S3::Client#upload_part`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#upload_part-instance_method

@@ -53,6 +53,16 @@ describe Shrine::Plugins::UppyS3Multipart do
     assert_match /^prefix\/\w+$/,          client.api_requests[0][:params][:key]
   end
 
+  it "passes the public" do
+    @shrine.storages[:s3] = s3(public: true)
+
+    app = test_app
+    app.post "/multipart"
+
+    assert_equal :create_multipart_upload, client.api_requests[0][:operation_name]
+    assert_match "public-read",            client.api_requests[0][:params][:acl]
+  end
+
   it "passes client options" do
     @shrine.plugin :uppy_s3_multipart, options: {
       create_multipart_upload: { acl: "public-read" },

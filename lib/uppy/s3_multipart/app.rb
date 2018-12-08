@@ -8,10 +8,11 @@ require "cgi"
 module Uppy
   module S3Multipart
     class App
-      def initialize(bucket:, prefix: nil, options: {})
+      def initialize(bucket:, prefix: nil, public: nil, options: {})
         @router = Class.new(Router)
         @router.opts[:client]  = Client.new(bucket: bucket)
         @router.opts[:prefix]  = prefix
+        @router.opts[:public]  = public
         @router.opts[:options] = options
       end
 
@@ -42,7 +43,10 @@ module Uppy
             # CGI-escape the filename because aws-sdk's signature calculator trips on special characters
             content_disposition = "inline; filename=\"#{CGI.escape(filename)}\"" if filename
 
-            result = client_call(:create_multipart_upload, key: key, content_type: content_type, content_disposition: content_disposition)
+            options = { content_type: content_type, content_disposition: content_disposition }
+            options[:acl] = "public-read" if opts[:public]
+
+            result = client_call(:create_multipart_upload, key: key, **options)
 
             { uploadId: result.fetch(:upload_id), key: result.fetch(:key) }
           end
@@ -82,7 +86,7 @@ module Uppy
 
             client_call(:complete_multipart_upload, upload_id: upload_id, key: key, parts: parts)
 
-            object_url = client_call(:object_url, key: key)
+            object_url = client_call(:object_url, key: key, public: opts[:public])
 
             { location: object_url }
           end

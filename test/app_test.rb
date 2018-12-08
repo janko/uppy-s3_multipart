@@ -60,7 +60,19 @@ describe Uppy::S3Multipart::App do
 
       response = app.post "/s3/multipart"
 
+      assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
+      assert_match /^prefix\/\w{32}/,        @s3.api_requests[0][:params][:key]
+
       assert_match /^prefix\/\w{32}$/, response.body_json["key"]
+    end
+
+    it "handles :public option" do
+      @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, public: true)
+
+      response = app.post "/s3/multipart"
+
+      assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
+      assert_equal "public-read",            @s3.api_requests[0][:params][:acl]
     end
 
     it "handles :options as a hash" do
@@ -221,6 +233,19 @@ describe Uppy::S3Multipart::App do
       assert_equal "application/json", response.headers["Content-Type"]
 
       assert_includes response.body_json["location"], "response-content-disposition"
+    end
+
+    it "handles :public option" do
+      @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, public: true)
+
+      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" }, json: { parts: [] }
+
+      assert_equal 200,                response.status
+      assert_equal "application/json", response.headers["Content-Type"]
+
+      uri = URI.parse(response.body_json["location"])
+
+      assert_nil uri.query
     end
 
     it "returns error response when 'key' parameter is missing" do

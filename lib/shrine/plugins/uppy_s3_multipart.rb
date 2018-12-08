@@ -15,12 +15,12 @@ class Shrine
             fail Error, "expected storage to be a Shrine::Storage::S3, but was #{s3.inspect}"
           end
 
-          ::Uppy::S3Multipart::App.new(
-            bucket:  s3.bucket,
-            prefix:  s3.prefix,
-            options: opts[:uppy_s3_multipart_options],
-            **options
-          )
+          options[:bucket]  ||= s3.bucket
+          options[:prefix]  ||= s3.prefix
+          options[:public]  ||= s3.public if s3.respond_to?(:public)
+          options[:options] ||= opts[:uppy_s3_multipart_options]
+
+          ::Uppy::S3Multipart::App.new(**options)
         end
       end
     end

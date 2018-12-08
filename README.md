@@ -134,6 +134,14 @@ files**, instead it will just copy metadata that was extracted on the client
 side. See [this section][metadata direct uploads] for the rationale and
 instructions on how to opt in.
 
+If you want to make uploads public and have public URLs without query
+parameters returned, you can pass `public: true` to the Shrine storage (note
+that this is supported starting from Shrine 2.13).
+
+```rb
+Shrine::Storage::S3.new(public: true, **options)
+```
+
 Both the plugin and method accept `:options` for specifying additional options
 to the S3 client operations (see the [Client](#client) section for list of
 operations and options they accept):
@@ -194,9 +202,16 @@ uppy.use(Uppy.AwsS3Multipart, {
 })
 ```
 
-The `Uppy::S3Mutipart::App` initializer accepts `:options` for specifying
-additional options to the S3 client operations (see the [Client](#client)
-section for list of operations and options they accept):
+If you want to make uploads public and have public URLs without query
+parameters returned, you can pass `public: true` to the app.
+
+```rb
+Uppy::S3Multipart::App.new(bucket: bucket, public: true)
+```
+
+You can also pass `:options` for specifying additional options to the S3 client
+operations (see the [Client](#client) section for list of operations and
+options they accept):
 
 ```rb
 Uppy::S3Multipart::App.new(bucket: bucket, options: {

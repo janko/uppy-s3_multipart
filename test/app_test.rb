@@ -210,6 +210,19 @@ describe Uppy::S3Multipart::App do
       assert_match URI.regexp, response.body_json["location"]
     end
 
+    it "applies options for object URL" do
+      @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, options: {
+        object_url: { response_content_disposition: "attachment" }
+      })
+
+      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" }, json: { parts: [] }
+
+      assert_equal 200,                response.status
+      assert_equal "application/json", response.headers["Content-Type"]
+
+      assert_includes response.body_json["location"], "response-content-disposition"
+    end
+
     it "returns error response when 'key' parameter is missing" do
       response = app.post "/s3/multipart/foo/complete", json: { parts: [] }
 

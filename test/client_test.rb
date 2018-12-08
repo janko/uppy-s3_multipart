@@ -118,6 +118,35 @@ describe Uppy::S3Multipart::Client do
     end
   end
 
+  describe "#object_url" do
+    it "returns presigned object URL" do
+      url = @client.object_url(key: "foo")
+      uri = URI.parse(url)
+
+      assert_includes uri.host, "my-bucket"
+      assert_equal "/foo", uri.path
+      refute_nil uri.query
+    end
+
+    it "accepts :public option for public URLs" do
+      url = @client.object_url(key: "foo", public: true)
+      uri = URI.parse(url)
+
+      assert_includes uri.host, "my-bucket"
+      assert_equal "/foo", uri.path
+      assert_nil uri.query
+    end
+
+    it "forwards additional options to the aws-sdk call" do
+      url = @client.object_url(key: "foo", response_content_disposition: "attachment")
+      uri = URI.parse(url)
+
+      assert_includes uri.host, "my-bucket"
+      assert_equal "/foo", uri.path
+      assert_includes uri.query, "response-content-disposition"
+    end
+  end
+
   describe "#abort_multipart_upload" do
     it "aborts the multipart upload" do
       @client.abort_multipart_upload(upload_id: "bar", key: "foo")

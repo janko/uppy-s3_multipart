@@ -80,9 +80,11 @@ module Uppy
               end
             end
 
-            result = client_call(:complete_multipart_upload, upload_id: upload_id, key: key, parts: parts)
+            client_call(:complete_multipart_upload, upload_id: upload_id, key: key, parts: parts)
 
-            { location: result.fetch(:location) }
+            object_url = client_call(:object_url, key: key)
+
+            { location: object_url }
           end
 
           # DELETE /s3/multipart/:uploadId

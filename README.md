@@ -307,6 +307,28 @@ Returns:
 
 * `:location` – URL to the uploaded object
 
+#### `#object_url`
+
+Generates URL to the object.
+
+```rb
+client.object_url(key: key, **options)
+# => "https://my-bucket.s3.amazonaws.com/foo?..."
+```
+
+This is called after `#complete_multipart_upload` in the app and returned in
+the response.
+
+Accepts:
+
+* `:key` – object key
+* `:public` – for generating a public URL (default is presigned expiring URL)
+* additional options for [`Aws::S3::Object#presigned_url`] and [`Aws::S3::Client#get_object`]
+
+Returns:
+
+* URL to the object
+
 #### `#abort_multipart_upload`
 
 Aborts the multipart upload, removing all parts uploaded so far.
@@ -348,5 +370,7 @@ License](https://opensource.org/licenses/MIT).
 [`Aws::S3::Client#upload_part`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#upload_part-instance_method
 [`Aws::S3::Presigner#presigned_url`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Presigner.html#presigned_url-instance_method
 [`Aws::S3::Client#complete_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#complete_multipart_upload-instance_method
+[`Aws::S3::Object#presigned_url`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Object.html#presigned_url-instance_method
+[`Aws::S3::Client#get_object`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#get_object-instance_method
 [`Aws::S3::Client#abort_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#abort_multipart_upload-instance_method
 [metadata direct uploads]: https://github.com/shrinerb/shrine/blob/master/doc/metadata.md#direct-uploads

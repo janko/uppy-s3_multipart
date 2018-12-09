@@ -143,22 +143,26 @@ Shrine::Storage::S3.new(public: true, **options)
 ```
 
 Both the plugin and method accept `:options` for specifying additional options
-to the S3 client operations (see the [Client](#client) section for list of
-operations and options they accept):
+to the S3 client operations. The options can be specified statically as a Hash
+or generated dynamically for each request. In the latter case a
+[`Rack::Request`] object is also passed to the block.
 
 ```rb
 Shrine.plugin :uppy_s3_multipart, options: {
-  create_multipart_upload: { acl: "public-read" } # static
+  create_multipart_upload: { acl: "public-read" }, # static
+  object_url: -> (request) { { response_content_disposition: "attachment" } }, # dynamic
 }
 
 # OR
 
 Shrine.uppy_s3_multipart(:cache, options: {
-  create_multipart_upload: -> (request) { { acl: "public-read" } } # dynamic
+  create_multipart_upload: { acl: "public-read" }, # static
+  object_url: -> (request) { { response_content_disposition: "attachment" } }, # dynamic
 })
 ```
 
-In the dynamic version the yielded object is an instance of [`Rack::Request`].
+See the [Client](#client) section for list of operations and options they
+accept.
 
 ### App
 
@@ -209,23 +213,20 @@ parameters returned, you can pass `public: true` to the app.
 Uppy::S3Multipart::App.new(bucket: bucket, public: true)
 ```
 
-You can also pass `:options` for specifying additional options to the S3 client
-operations (see the [Client](#client) section for list of operations and
-options they accept):
+You can also pass `:options` for additional options to the S3 client
+operations. The options can be specified statically as a Hash or generated
+dynamically for each request. In the latter case a [`Rack::Request`] object is
+also passed to the block.
 
 ```rb
 Uppy::S3Multipart::App.new(bucket: bucket, options: {
-  create_multipart_upload: { acl: "public-read" } # static
-})
-
-# OR
-
-Uppy::S3Multipart::App.new(bucket: bucket, options: {
-  create_multipart_upload: -> (request) { { acl: "public-read" } } # dynamic
+  create_multipart_upload: { acl: "public-read" }, # static
+  object_url: -> (request) { { response_content_disposition: "attachment" } }, # dynamic
 })
 ```
 
-In the dynamic version the yielded object is an instance of [`Rack::Request`].
+See the [Client](#client) section for list of operations and options they
+accept.
 
 ### Client
 

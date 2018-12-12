@@ -71,8 +71,8 @@ Shrine.storages = {
 Shrine.plugin :uppy_s3_multipart # load the plugin
 ```
 
-The plugin will provide a `Shrine.uppy_s3_multipart` method, which returns an
-instance of `Uppy::S3Multipart::App`, which is a Rack app that you can mount
+The plugin will provide a `Shrine.uppy_s3_multipart` method that creates a new
+`Uppy::S3Multipart::App` instance, which is a Rack app that you can mount
 inside your main application:
 
 ```rb
@@ -85,16 +85,6 @@ end
 map "/s3/multipart" do
   run Shrine.uppy_s3_multipart(:cache)
 end
-```
-
-This will add the routes that the `AwsS3Multipart` Uppy plugin expects:
-
-```
-POST   /s3/multipart
-GET    /s3/multipart/:uploadId
-GET    /s3/multipart/:uploadId/:partNumber
-POST   /s3/multipart/:uploadId/complete
-DELETE /s3/multipart/:uploadId
 ```
 
 Now in your Uppy configuration point `serverUrl` to your app's URL:
@@ -129,40 +119,10 @@ uppy.on('upload-success', function (file, data, uploadURL) {
 Shrine. From there you can swap the `presign_endpoint` + `AwsS3` code with the
 `uppy_s3_multipart` + `AwsS3Multipart` setup.**
 
-Note that by default **Shrine won't extract metadata from directly upload
-files**, instead it will just copy metadata that was extracted on the client
-side. See [this section][metadata direct uploads] for the rationale and
-instructions on how to opt in.
-
-If you want to make uploads public and have public URLs without query
-parameters returned, you can pass `public: true` to the Shrine storage (note
-that this is supported starting from Shrine 2.13).
-
-```rb
-Shrine::Storage::S3.new(public: true, **options)
-```
-
-Both the plugin and method accept `:options` for specifying additional options
-to the S3 client operations. The options can be specified statically as a Hash
-or generated dynamically for each request. In the latter case a
-[`Rack::Request`] object is also passed to the block.
-
-```rb
-Shrine.plugin :uppy_s3_multipart, options: {
-  create_multipart_upload: { acl: "public-read" }, # static
-  object_url: -> (request) { { response_content_disposition: "attachment" } }, # dynamic
-}
-
-# OR
-
-Shrine.uppy_s3_multipart(:cache, options: {
-  create_multipart_upload: { acl: "public-read" }, # static
-  object_url: -> (request) { { response_content_disposition: "attachment" } }, # dynamic
-})
-```
-
-See the [Client](#client) section for list of operations and options they
-accept.
+Note that **Shrine won't extract metadata from directly upload files on
+assignment** by default. Instead, it will just copy metadata that was extracted
+on the client side. See [this section][metadata direct uploads] for the
+rationale and instructions on how to opt in.
 
 ### App
 
@@ -197,7 +157,17 @@ map "/s3/multipart" do
 end
 ```
 
-In your Uppy configuration point `serverUrl` to your app's URL:
+This will add the routes that the `AwsS3Multipart` Uppy plugin expects:
+
+```
+POST   /s3/multipart
+GET    /s3/multipart/:uploadId
+GET    /s3/multipart/:uploadId/:partNumber
+POST   /s3/multipart/:uploadId/complete
+DELETE /s3/multipart/:uploadId
+```
+
+Now in your Uppy configuration point `serverUrl` to your app's URL:
 
 ```js
 // ...
@@ -206,27 +176,152 @@ uppy.use(Uppy.AwsS3Multipart, {
 })
 ```
 
-If you want to make uploads public and have public URLs without query
-parameters returned, you can pass `public: true` to the app.
+### Configuration
+
+This section describe various configuration options that you can pass to
+`Uppy::S3Multipart::App`.
+
+#### `:bucket`
+
+The `:bucket` option is mandatory and accepts an instance of `Aws::S3::Bucket`.
+It's easiest to create an `Aws::S3::Resource`, and call `#bucket` on it.
+
+```rb
+require "uppy/s3_multipart"
+
+resource = Aws::S3::Resource.new(
+  access_key_id:     "<ACCESS_KEY_ID>",
+  secret_access_key: "<SECRET_ACCESS_KEY>",
+  region:            "<REGION>",
+)
+
+bucket = resource.bucket("<BUCKET>")
+
+Uppy::S3MUltipart::App.new(bucket: bucket)
+```
+
+If you want to use [Minio], you can easily configure your `Aws::S3::Bucket` to
+point to your Minio server:
+
+```rb
+resource = Aws::S3::Resource.new(
+  access_key_id:     "<MINIO_ACCESS_KEY>", # "AccessKey" value
+  secret_access_key: "<MINIO_SECRET_KEY>", # "SecretKey" value
+  endpoint:          "<MINIO_ENDPOINT>",   # "Endpoint"  value
+  region:            "us-east-1",
+  force_path_style:  true,
+)
+
+bucket = resource.bucket("<MINIO_BUCKET>") # name of the bucket you created
+```
+
+See the [`Aws::S3::Client#initialize`] docs for all supported configuration
+options. In the Shrine plugin this option is inferred from the S3 storage.
+
+#### `:prefix`
+
+The `:prefix` option allows you to specify a directory which you want the files
+to be uploaded to.
+
+```rb
+Uppy::S3Multipart::App.new(bucket: bucket, prefix: "cache")
+```
+
+In the Shrine plugin this option is inferred from the S3 storage:
+
+```rb
+Shrine.storages = {
+  cache: Shrine::Storage::S3.new(prefix: "cache", **options),
+  store: Shrine::Storage::S3.new(**options),
+}
+```
+
+#### `:options`
+
+The `:options` option allows you to pass additional parameters to [Client]
+operations. With the Shrine plugin they can be passed when initializing the
+plugin:
+
+```rb
+Shrine.plugin :uppy_s3_multipart, options: { ... }
+```
+
+or when creating the app:
+
+```rb
+Shrine.uppy_s3_multipart(:cache, options: { ... })
+```
+
+In the end they are just forwarded to `Uppy::S3Multipart::App#initialize`:
+
+```rb
+Uppy::S3Multipart::App.new(bucket: bucket, options: { ... })
+```
+
+In the `:options` hash keys are [Client] operation names, and values are the
+parameters. The parameters can be provided statically:
+
+```rb
+options: {
+  create_multipart_upload: { cache_control: "max-age=#{365*24*60*60}" },
+}
+```
+
+or generated dynamically for each request:
+
+```rb
+options: {
+  create_multipart_upload: -> (request) do
+    { key: SecureRandom.uuid }
+  end
+}
+```
+
+In that case a [`Rack::Request`] object is also passed to the block. The
+initial request to `POST /s3/multipart` will contain `type` and `filename`
+query parameters, so for example you could use that to make requesting the URL
+later force a download with the original filename:
+
+```rb
+options: {
+  create_multipart_upload: -> (request) do
+    filename = request.params["filename"]
+
+    { content_disposition: "attachment; filename=\"#{CGI.escape(filename)}\"" }
+  end
+}
+```
+
+See the [Client] section for list of operations and parameters they accept.
+
+#### `:public`
+
+The `:public` option sets the ACL of uploaded objects to `public-read`, and
+makes sure the object URL returned at the end is a public non-expiring URL
+without query parameters.
 
 ```rb
 Uppy::S3Multipart::App.new(bucket: bucket, public: true)
 ```
 
-You can also pass `:options` for additional options to the S3 client
-operations. The options can be specified statically as a Hash or generated
-dynamically for each request. In the latter case a [`Rack::Request`] object is
-also passed to the block.
+It's really just a shorthand for:
 
 ```rb
 Uppy::S3Multipart::App.new(bucket: bucket, options: {
-  create_multipart_upload: { acl: "public-read" }, # static
-  object_url: -> (request) { { response_content_disposition: "attachment" } }, # dynamic
+  create_multipart_upload: { acl: "public-read" },
+  object_url: { public: true },
 })
 ```
 
-See the [Client](#client) section for list of operations and options they
-accept.
+In the Shrine plugin this option is inferred from the S3 storage (available
+from Shrine 2.13):
+
+```rb
+Shrine.storages = {
+  cache: Shrine::Storage::S3.new(prefix: "cache", public: true, **options),
+  store: Shrine::Storage::S3.new(**options),
+}
+```
 
 ### Client
 
@@ -380,7 +475,10 @@ License](https://opensource.org/licenses/MIT).
 [AwsS3Multipart]: https://uppy.io/docs/aws-s3-multipart/
 [Shrine]: https://shrinerb.com
 [Adding Direct S3 Uploads]: https://github.com/shrinerb/shrine/wiki/Adding-Direct-S3-Uploads
+[Minio]: https://minio.io/
+[Client]: #client
 [`Rack::Request`]: https://www.rubydoc.info/github/rack/rack/master/Rack/Request
+[`Aws::S3::Client#initialize`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#initialize-instance_method
 [`Aws::S3::Client#create_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#create_multipart_upload-instance_method
 [`Aws::S3::Client#list_parts`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#list_parts-instance_method
 [`Aws::S3::Client#upload_part`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#upload_part-instance_method

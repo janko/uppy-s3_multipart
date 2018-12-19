@@ -1,6 +1,6 @@
 Gem::Specification.new do |gem|
-  gem.name          = "uppy-s3_multipart"
-  gem.version       = "0.2.0"
+  gem.name         = "uppy-s3_multipart"
+  gem.version      = "0.2.0"
 
   gem.required_ruby_version = ">= 2.2"
 
@@ -15,6 +15,7 @@ Gem::Specification.new do |gem|
 
   gem.add_dependency "roda", ">= 2.27", "< 4"
   gem.add_dependency "aws-sdk-s3", "~> 1.0"
+  gem.add_dependency "content_disposition", "~> 1.0"
 
   gem.add_development_dependency "rake"
   gem.add_development_dependency "minitest"

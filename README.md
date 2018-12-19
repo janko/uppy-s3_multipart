@@ -280,14 +280,15 @@ options: {
 In that case a [`Rack::Request`] object is also passed to the block. The
 initial request to `POST /s3/multipart` will contain `type` and `filename`
 query parameters, so for example you could use that to make requesting the URL
-later force a download with the original filename:
+later force a download with the original filename (using the
+[content_disposition] gem):
 
 ```rb
 options: {
   create_multipart_upload: -> (request) do
     filename = request.params["filename"]
 
-    { content_disposition: "attachment; filename=\"#{CGI.escape(filename)}\"" }
+    { content_disposition: ContentDisposition.attachment(filename) }
   end
 }
 ```
@@ -477,6 +478,7 @@ License](https://opensource.org/licenses/MIT).
 [Adding Direct S3 Uploads]: https://github.com/shrinerb/shrine/wiki/Adding-Direct-S3-Uploads
 [Minio]: https://minio.io/
 [Client]: #client
+[content_disposition]: https://github.com/shrinerb/content_disposition
 [`Rack::Request`]: https://www.rubydoc.info/github/rack/rack/master/Rack/Request
 [`Aws::S3::Client#initialize`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#initialize-instance_method
 [`Aws::S3::Client#create_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#create_multipart_upload-instance_method

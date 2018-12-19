@@ -1,9 +1,9 @@
 require "uppy/s3_multipart/client"
 
 require "roda"
+require "content_disposition"
 
 require "securerandom"
-require "cgi"
 
 module Uppy
   module S3Multipart
@@ -40,8 +40,7 @@ module Uppy
             key       = SecureRandom.hex + extension
             key       = "#{opts[:prefix]}/#{key}" if opts[:prefix]
 
-            # CGI-escape the filename because aws-sdk's signature calculator trips on special characters
-            content_disposition = "inline; filename=\"#{CGI.escape(filename)}\"" if filename
+            content_disposition = ContentDisposition.inline(filename) if filename
 
             options = { content_type: content_type, content_disposition: content_disposition }
             options[:acl] = "public-read" if opts[:public]

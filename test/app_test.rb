@@ -49,8 +49,10 @@ describe Uppy::S3Multipart::App do
     it "handles 'filename' JSON body parameter" do
       response = app.post "/s3/multipart", json: { filename: "nature.jpg" }
 
-      assert_equal :create_multipart_upload,          @s3.api_requests[0][:operation_name]
-      assert_equal "inline; filename=\"nature.jpg\"", @s3.api_requests[0][:params][:content_disposition]
+      expected_content_disposition = %(inline; filename="nature.jpg"; filename*=UTF-8''nature.jpg)
+
+      assert_equal :create_multipart_upload,     @s3.api_requests[0][:operation_name]
+      assert_equal expected_content_disposition, @s3.api_requests[0][:params][:content_disposition]
 
       assert_match /^\w{32}\.jpg$/, response.body_json["key"]
     end

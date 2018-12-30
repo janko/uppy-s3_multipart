@@ -264,32 +264,34 @@ parameters. The parameters can be provided statically:
 ```rb
 options: {
   create_multipart_upload: { cache_control: "max-age=#{365*24*60*60}" },
+  prepare_upload_part:     { expires_in: 10 },
 }
 ```
 
-or generated dynamically for each request:
+or generated dynamically for each request, in which case a [`Rack::Request`]
+object is also passed to the block:
 
 ```rb
 options: {
-  create_multipart_upload: -> (request) do
+  create_multipart_upload: -> (request) {
     { key: SecureRandom.uuid }
-  end
+  }
 }
 ```
 
-In that case a [`Rack::Request`] object is also passed to the block. The
-initial request to `POST /s3/multipart` will contain `type` and `filename`
-query parameters, so for example you could use that to make requesting the URL
-later force a download with the original filename (using the
-[content_disposition] gem):
+The initial request to `POST /s3/multipart` (which calls the
+`#create_multipart_upload` operation) will contain `type` and `filename` query
+parameters, so for example you could use that to make requesting the URL later
+force a download with the original filename (using the [content_disposition]
+gem):
 
 ```rb
 options: {
-  create_multipart_upload: -> (request) do
+  create_multipart_upload: -> (request) {
     filename = request.params["filename"]
 
     { content_disposition: ContentDisposition.attachment(filename) }
-  end
+  }
 }
 ```
 
@@ -335,7 +337,7 @@ require "uppy/s3_multipart/client"
 client = Uppy::S3Multipart::Client.new(bucket: bucket)
 ```
 
-#### `create_multipart_upload`
+#### `#create_multipart_upload`
 
 Initiates a new multipart upload.
 

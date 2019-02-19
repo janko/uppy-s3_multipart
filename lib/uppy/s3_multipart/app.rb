@@ -32,7 +32,7 @@ module Uppy
 
         route do |r|
           # POST /s3/multipart
-          r.post true do
+          r.post ["", true] do
             content_type = r.params["type"]
             filename     = r.params["filename"]
 

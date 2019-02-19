@@ -101,6 +101,13 @@ describe Uppy::S3Multipart::App do
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "public-read",            @s3.api_requests[0][:params][:acl]
     end
+
+    it "works with a trailing slash (for Rails)" do
+      response = app.post "/s3/multipart/"
+
+      assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
+      assert_match /^\w{32}$/,               @s3.api_requests[0][:params][:key]
+    end
   end
 
   describe "GET /s3/multipart/:uploadId" do

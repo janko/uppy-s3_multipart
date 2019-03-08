@@ -11,7 +11,7 @@ module Uppy
       def initialize(bucket:, prefix: nil, public: nil, options: {})
         @router = Class.new(Router)
         @router.opts[:client]  = Client.new(bucket: bucket)
-        @router.opts[:prefix]  = prefix
+        @router.opts[:prefix]  = options[:dynamic_prefix] || prefix
         @router.opts[:public]  = public
         @router.opts[:options] = options
       end
@@ -38,7 +38,10 @@ module Uppy
 
             extension = File.extname(filename.to_s)
             key       = SecureRandom.hex + extension
-            key       = "#{opts[:prefix]}/#{key}" if opts[:prefix]
+            if prefix = opts[:prefix]
+              prefix = prefix.call(env) if prefix.respond_to?(:call)
+              key = "#{prefix}/#{key}" 
+            end
 
             content_disposition = ContentDisposition.inline(filename) if filename
 

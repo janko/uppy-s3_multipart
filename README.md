@@ -101,9 +101,9 @@ uploaded file data (this example assumes your temporary Shrine S3 storage has
 `prefix: "cache"` set):
 
 ```js
-uppy.on('upload-success', function (file, data, uploadURL) {
+uppy.on('upload-success', function (file, response) {
   var uploadedFileData = JSON.stringify({
-    id: uploadURL.match(/\/cache\/([^\?]+)/)[1], // extract key without prefix
+    id: response.uploadURL.match(/\/cache\/([^\?]+)/)[1], // extract key without prefix
     storage: 'cache',
     metadata: {
       size:      file.size,

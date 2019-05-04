@@ -373,4 +373,9 @@ describe Uppy::S3Multipart::App do
       assert_equal "bob",                   @s3.api_requests[0][:params][:request_payer]
     end
   end
+
+  it "defines #inspect and #to_s" do
+    assert_equal "#<Uppy::S3Multipart::App>", @endpoint.inspect
+    assert_equal "#<Uppy::S3Multipart::App>", @endpoint.to_s
+  end
 end

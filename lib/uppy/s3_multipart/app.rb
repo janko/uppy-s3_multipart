@@ -20,6 +20,11 @@ module Uppy
         @router.call(env)
       end
 
+      def inspect
+        "#<Uppy::S3Multipart::App>"
+      end
+      alias to_s inspect
+
       class Router < Roda
         plugin :all_verbs
         plugin :json

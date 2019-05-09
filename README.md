@@ -87,12 +87,12 @@ map "/s3/multipart" do
 end
 ```
 
-Now in your Uppy configuration point `serverUrl` to your app's URL:
+Now in your Uppy configuration point `companionUrl` to your app's URL:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: '/',
+  companionUrl: '/',
 })
 ```
 
@@ -167,12 +167,12 @@ POST   /s3/multipart/:uploadId/complete
 DELETE /s3/multipart/:uploadId
 ```
 
-Now in your Uppy configuration point `serverUrl` to your app's URL:
+Now in your Uppy configuration point `companionUrl` to your app's URL:
 
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  serverUrl: '/',
+  companionUrl: '/',
 })
 ```
 

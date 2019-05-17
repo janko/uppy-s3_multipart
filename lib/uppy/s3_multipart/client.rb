@@ -56,13 +56,7 @@ module Uppy
 
       def abort_multipart_upload(upload_id:, key:, **options)
         multipart_upload = multipart_upload(upload_id, key)
-
-        # aws-sdk-s3 docs recommend retrying the abort in case the multipart
-        # upload still has parts
-        loop do
-          multipart_upload.abort(**options)
-          break unless multipart_upload.parts.any?
-        end
+        multipart_upload.abort(**options)
 
         {}
       end

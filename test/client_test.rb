@@ -151,39 +151,12 @@ describe Uppy::S3Multipart::Client do
     it "aborts the multipart upload" do
       @client.abort_multipart_upload(upload_id: "bar", key: "foo")
 
-      assert_equal :abort_multipart_upload, @s3.api_requests[0][:operation_name]
-      assert_equal "foo",                   @s3.api_requests[0][:params][:key]
-      assert_equal "bar",                   @s3.api_requests[0][:params][:upload_id]
-      assert_equal "my-bucket",             @s3.api_requests[0][:params][:bucket]
-    end
-
-    it "retries the abort if it failed" do
-      @s3.stub_responses(:list_parts, [
-        { parts: [{ part_number: 1, etag: "etag" }] }, # first call
-        { parts: [] },                                 # second call
-      ])
-
-      @client.abort_multipart_upload(upload_id: "bar", key: "foo")
+      assert_equal 1, @s3.api_requests.count
 
       assert_equal :abort_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "foo",                   @s3.api_requests[0][:params][:key]
       assert_equal "bar",                   @s3.api_requests[0][:params][:upload_id]
       assert_equal "my-bucket",             @s3.api_requests[0][:params][:bucket]
-
-      assert_equal :list_parts,             @s3.api_requests[1][:operation_name]
-      assert_equal "foo",                   @s3.api_requests[1][:params][:key]
-      assert_equal "bar",                   @s3.api_requests[1][:params][:upload_id]
-      assert_equal "my-bucket",             @s3.api_requests[1][:params][:bucket]
-
-      assert_equal :abort_multipart_upload, @s3.api_requests[2][:operation_name]
-      assert_equal "foo",                   @s3.api_requests[2][:params][:key]
-      assert_equal "bar",                   @s3.api_requests[2][:params][:upload_id]
-      assert_equal "my-bucket",             @s3.api_requests[2][:params][:bucket]
-
-      assert_equal :list_parts,             @s3.api_requests[3][:operation_name]
-      assert_equal "foo",                   @s3.api_requests[3][:params][:key]
-      assert_equal "bar",                   @s3.api_requests[3][:params][:upload_id]
-      assert_equal "my-bucket",             @s3.api_requests[3][:params][:bucket]
     end
 
     it "returns empty result" do

@@ -464,7 +464,7 @@ Covenant](http://contributor-covenant.org) code of conduct.
 The gem is available as open source under the terms of the [MIT
 License](https://opensource.org/licenses/MIT).
 
-[AwsS3Multipart]: https://uppy.io/docs/aws-s3-multipart/
+[aws-s3-multipart]: https://uppy.io/docs/aws-s3-multipart/
 [Shrine]: https://shrinerb.com
 [Adding Direct S3 Uploads]: https://github.com/shrinerb/shrine/wiki/Adding-Direct-S3-Uploads
 [Minio]: https://minio.io/

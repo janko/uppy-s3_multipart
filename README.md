@@ -1,6 +1,6 @@
 # Uppy::S3Multipart
 
-Provides a Rack application that implements endpoints for the [AwsS3Multipart]
+Provides a Rack application that implements endpoints for the [aws-s3-multipart]
 Uppy plugin. This enables multipart uploads directly to S3, which is
 recommended when dealing with large files, as it allows resuming interrupted
 uploads.
@@ -10,12 +10,12 @@ uploads.
 Add the gem to your Gemfile:
 
 ```rb
-gem "uppy-s3_multipart", "~> 0.2"
+gem "uppy-s3_multipart", "~> 0.3"
 ```
 
 ## Setup
 
-In order to allow direct multipart uploads to your S3 bucket, we need to update
+In order to allow direct multipart uploads to your S3 bucket, you need to update
 the bucket's CORS configuration. In the AWS S3 Console go to your bucket, click
 on "Permissions" tab and then on "CORS configuration". There paste in the
 following:
@@ -51,10 +51,62 @@ CORS settings to be applied.
 
 This gem provides a Rack application that you can mount inside your main
 application. If you're using [Shrine], you can initialize the Rack application
-via the `uppy_s3_multipart` Shrine plugin, otherwise you can initialize it
-directly.
+via the [Shrine plugin](#shrine).
+
+### App
+
+At its core, you initialize an `Uppy::S3Multipart::App` with an
+`Aws::S3::Bucket` object:
+
+```rb
+require "uppy/s3_multipart"
+
+bucket = Aws::S3::Bucket.new(
+  name:              "my-bucket",
+  access_key_id:     "...",
+  secret_access_key: "...",
+  region:            "...",
+)
+
+UPPY_S3_MULTIPART_APP = Uppy::S3Multipart::App.new(bucket: bucket)
+```
+
+The instance of `Uppy::S3Multipart::App` is a Rack application that can be
+mounted in your router (`config/routes.rb` in Rails). It should be
+mounted at `/s3/multipart`:
+
+```rb
+# config/routes.rb (Rails)
+Rails.application.routes.draw do
+  # ...
+  mount UPPY_S3_MULTIPART_APP => "/s3/multipart"
+end
+```
+
+This will add the routes that the `aws-s3-multipart` Uppy plugin expects:
+
+```
+POST   /s3/multipart
+GET    /s3/multipart/:uploadId
+GET    /s3/multipart/:uploadId/:partNumber
+POST   /s3/multipart/:uploadId/complete
+DELETE /s3/multipart/:uploadId
+```
+
+Since your app will now play the role of Uppy Companion, in your Uppy
+configuration you can point `companionUrl` to your app's URL:
+
+```js
+// ...
+uppy.use(Uppy.AwsS3Multipart, {
+  companionUrl: '/',
+})
+```
 
 ### Shrine
+
+If you're using Shrine, you can use the `uppy_s3_multipart` Shrine plugin that
+ships with this gem to simplify the setup.
 
 In your Shrine initializer load the `uppy_s3_multipart` plugin:
 
@@ -71,19 +123,14 @@ Shrine.storages = {
 Shrine.plugin :uppy_s3_multipart # load the plugin
 ```
 
-The plugin will provide a `Shrine.uppy_s3_multipart` method that creates a new
-`Uppy::S3Multipart::App` instance, which is a Rack app that you can mount
-inside your main application:
+The plugin will provide a `Shrine.uppy_s3_multipart` method that creates the
+`Uppy::S3Multipart::App` instance, which you can then mount inside your router:
 
 ```rb
-# Rails (config/routes.rb)
+# config/routes.rb (Rails)
 Rails.application.routes.draw do
+  # ...
   mount Shrine.uppy_s3_multipart(:cache) => "/s3/multipart"
-end
-
-# Rack (config.ru)
-map "/s3/multipart" do
-  run Shrine.uppy_s3_multipart(:cache)
 end
 ```
 
@@ -96,9 +143,9 @@ uppy.use(Uppy.AwsS3Multipart, {
 })
 ```
 
-In the `upload-success` Uppy callback you can then construct the Shrine
-uploaded file data (this example assumes your temporary Shrine S3 storage has
-`prefix: "cache"` set):
+In the `upload-success` Uppy callback, you can construct the Shrine uploaded
+file data (this example assumes your temporary Shrine S3 storage has `prefix:
+"cache"` set):
 
 ```js
 uppy.on('upload-success', function (file, response) {
@@ -115,66 +162,14 @@ uppy.on('upload-success', function (file, response) {
 })
 ```
 
-**See [Adding Direct S3 Uploads] for an example of a complete Uppy setup with
-Shrine. From there you can swap the `presign_endpoint` + `AwsS3` code with the
-`uppy_s3_multipart` + `AwsS3Multipart` setup.**
+See [Adding Direct S3 Uploads] for an example of a complete Uppy setup with
+Shrine. From there you can swap the `presign_endpoint` + `aws-s3` code with the
+`uppy_s3_multipart` + `aws-s3-multipart` setup.
 
 Note that **Shrine won't extract metadata from directly upload files on
 assignment** by default. Instead, it will just copy metadata that was extracted
 on the client side. See [this section][metadata direct uploads] for the
 rationale and instructions on how to opt in.
-
-### App
-
-You can also use `uppy-s3_multipart` without Shrine, by initializing the
-`Uppy::S3Multipart::App` directly:
-
-```rb
-require "uppy/s3_multipart"
-
-resource = Aws::S3::Resource.new(
-  access_key_id:     "...",
-  secret_access_key: "...",
-  region:            "...",
-)
-
-bucket = resource.bucket("my-bucket")
-
-UPPY_S3_MULTIPART_APP = Uppy::S3Multipart::App.new(bucket: bucket)
-```
-
-You can mount it inside your main app in the same way:
-
-```rb
-# Rails (config/routes.rb)
-Rails.application.routes.draw do
-  mount UPPY_S3_MULTIPART_APP => "/s3/multipart"
-end
-
-# Rack (config.ru)
-map "/s3/multipart" do
-  run UPPY_S3_MULTIPART_APP
-end
-```
-
-This will add the routes that the `AwsS3Multipart` Uppy plugin expects:
-
-```
-POST   /s3/multipart
-GET    /s3/multipart/:uploadId
-GET    /s3/multipart/:uploadId/:partNumber
-POST   /s3/multipart/:uploadId/complete
-DELETE /s3/multipart/:uploadId
-```
-
-Now in your Uppy configuration point `companionUrl` to your app's URL:
-
-```js
-// ...
-uppy.use(Uppy.AwsS3Multipart, {
-  companionUrl: '/',
-})
-```
 
 ### Configuration
 
@@ -183,40 +178,41 @@ This section describe various configuration options that you can pass to
 
 #### `:bucket`
 
-The `:bucket` option is mandatory and accepts an instance of `Aws::S3::Bucket`.
-It's easiest to create an `Aws::S3::Resource`, and call `#bucket` on it.
+The `:bucket` option is mandatory and accepts an instance of `Aws::S3::Bucket`:
 
 ```rb
 require "uppy/s3_multipart"
 
-resource = Aws::S3::Resource.new(
+bucket = Aws::S3::Bucket.new(
+  name:              "<BUCKET>",
   access_key_id:     "<ACCESS_KEY_ID>",
   secret_access_key: "<SECRET_ACCESS_KEY>",
   region:            "<REGION>",
 )
 
-bucket = resource.bucket("<BUCKET>")
-
-Uppy::S3MUltipart::App.new(bucket: bucket)
+Uppy::S3Multipart::App.new(bucket: bucket)
 ```
 
-If you want to use [Minio], you can easily configure your `Aws::S3::Bucket` to
-point to your Minio server:
+If you want to use [Minio], you can easily configure the `Aws::S3::Bucket` to
+use your Minio server:
 
 ```rb
-resource = Aws::S3::Resource.new(
+bucket = Aws::S3::Bucket.new(
+  name:              "<MINIO_BUCKET>",
   access_key_id:     "<MINIO_ACCESS_KEY>", # "AccessKey" value
   secret_access_key: "<MINIO_SECRET_KEY>", # "SecretKey" value
   endpoint:          "<MINIO_ENDPOINT>",   # "Endpoint"  value
   region:            "us-east-1",
-  force_path_style:  true,
 )
 
-bucket = resource.bucket("<MINIO_BUCKET>") # name of the bucket you created
+Uppy::S3Multipart::App.new(bucket: bucket)
 ```
 
-See the [`Aws::S3::Client#initialize`] docs for all supported configuration
-options. In the Shrine plugin this option is inferred from the S3 storage.
+Except for `:name`, all options passed to [`Aws::S3::Bucket#initialize`] are
+forwarded to [`Aws::S3::Client#initialize`], see its documentation for
+additional options.
+
+In the Shrine plugin this configuration is inferred from the S3 storage.
 
 #### `:prefix`
 
@@ -227,14 +223,7 @@ to be uploaded to.
 Uppy::S3Multipart::App.new(bucket: bucket, prefix: "cache")
 ```
 
-In the Shrine plugin this option is inferred from the S3 storage:
-
-```rb
-Shrine.storages = {
-  cache: Shrine::Storage::S3.new(prefix: "cache", **options),
-  store: Shrine::Storage::S3.new(**options),
-}
-```
+In the Shrine plugin this option is inferred from the S3 storage.
 
 #### `:options`
 
@@ -482,6 +471,7 @@ License](https://opensource.org/licenses/MIT).
 [Client]: #client
 [content_disposition]: https://github.com/shrinerb/content_disposition
 [`Rack::Request`]: https://www.rubydoc.info/github/rack/rack/master/Rack/Request
+[`Aws::S3::Bucket#initialize`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Bucket.html#initialize-instance_method
 [`Aws::S3::Client#initialize`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#initialize-instance_method
 [`Aws::S3::Client#create_multipart_upload`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#create_multipart_upload-instance_method
 [`Aws::S3::Client#list_parts`]: https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/S3/Client.html#list_parts-instance_method

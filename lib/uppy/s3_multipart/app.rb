@@ -38,17 +38,16 @@ module Uppy
         route do |r|
           # POST /s3/multipart
           r.post ["", true] do
-            content_type = r.params["type"]
-            filename     = r.params["filename"]
+            type     = r.params["type"]
+            filename = r.params["filename"]
 
-            extension = File.extname(filename.to_s)
-            key       = SecureRandom.hex + extension
-            key       = "#{opts[:prefix]}/#{key}" if opts[:prefix]
+            key = SecureRandom.hex + File.extname(filename.to_s)
+            key = [*opts[:prefix], key].join("/")
 
-            content_disposition = ContentDisposition.inline(filename) if filename
-
-            options = { content_type: content_type, content_disposition: content_disposition }
-            options[:acl] = "public-read" if opts[:public]
+            options = {}
+            options[:content_type]        = type if type
+            options[:content_disposition] = ContentDisposition.inline(filename) if filename
+            options[:acl]                 = "public-read" if opts[:public]
 
             result = client_call(:create_multipart_upload, key: key, **options)
 

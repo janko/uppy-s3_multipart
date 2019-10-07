@@ -171,7 +171,7 @@ assignment** by default. Instead, it will just copy metadata that was extracted
 on the client side. See [this section][metadata direct uploads] for the
 rationale and instructions on how to opt in.
 
-### Configuration
+## Configuration
 
 This section describe various configuration options that you can pass to
 `Uppy::S3Multipart::App`.
@@ -315,7 +315,7 @@ Shrine.storages = {
 }
 ```
 
-### Client
+## Client
 
 If you would rather implement the endpoints yourself, you can utilize the
 `Uppy::S3Multipart::Client` to make S3 requests.

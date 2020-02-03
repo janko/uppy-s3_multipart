@@ -54,6 +54,11 @@ module Uppy
             { uploadId: result.fetch(:upload_id), key: result.fetch(:key) }
           end
 
+          # OPTIONS /s3/multipart
+          r.options ["", true] do
+            r.halt 204
+          end
+
           # GET /s3/multipart/:uploadId
           r.get String do |upload_id|
             key = param!("key")

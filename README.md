@@ -10,7 +10,7 @@ uploads.
 Add the gem to your Gemfile:
 
 ```rb
-gem "uppy-s3_multipart", "~> 0.3"
+gem "uppy-s3_multipart", "~> 1.0"
 ```
 
 ## Setup

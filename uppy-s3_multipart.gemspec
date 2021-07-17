@@ -1,6 +1,6 @@
 Gem::Specification.new do |gem|
   gem.name         = "uppy-s3_multipart"
-  gem.version      = "0.3.4"
+  gem.version      = "1.0.0"
 
   gem.required_ruby_version = ">= 2.2"
 

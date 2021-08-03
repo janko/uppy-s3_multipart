@@ -110,6 +110,16 @@ describe Uppy::S3Multipart::App do
     end
   end
 
+  describe "OPTIONS /s3/multipart/:uploadId/:partNumber" do
+    it "returns an empty response" do
+      response = app.options "/s3/multipart/foo/1"
+
+      assert_equal 204,      response.status
+      assert_equal Hash.new, response.headers
+      assert_equal "",       response.body_binary
+    end
+  end
+
   describe "OPTIONS /s3/multipart" do
     it "returns an empty response" do
       response = app.options "/s3/multipart"

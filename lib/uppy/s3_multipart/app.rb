@@ -59,6 +59,11 @@ module Uppy
             r.halt 204
           end
 
+          # OPTIONS /s3/multipart/:uploadId/:partNumber
+          r.options String, String do |upload_id, part_number|
+            r.halt 204
+          end
+
           # GET /s3/multipart/:uploadId
           r.get String do |upload_id|
             key = param!("key")

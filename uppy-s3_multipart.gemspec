@@ -23,4 +23,5 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency "shrine", "~> 2.13"
   gem.add_development_dependency "shrine-memory"
   gem.add_development_dependency "aws-sdk-core", "~> 3.23"
+  gem.add_development_dependency "rexml"
 end

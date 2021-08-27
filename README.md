@@ -1,4 +1,4 @@
-# Uppy::S3Multipart
+# uppy-s3_multipart
 
 Provides a Rack application that implements endpoints for the [aws-s3-multipart]
 Uppy plugin. This enables multipart uploads directly to S3, which is

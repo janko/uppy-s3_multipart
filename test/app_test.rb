@@ -358,6 +358,17 @@ describe Uppy::S3Multipart::App do
       assert_equal "Missing \"key\" parameter", response.body_json["error"]
     end
 
+    it "returns error response when 'key' parameter is for an upload that doesn't exist" do
+      @s3.stub_responses(:abort_multipart_upload, 'NoSuchUpload')
+
+      response = app.delete "/s3/multipart/null", query: { key: "null" }
+
+      assert_equal 404, response.status
+      assert_equal "application/json", response.headers["Content-Type"]
+
+      assert_equal "Upload doesn't exist for \"key\" parameter", response.body_json["error"]
+    end
+
     it "handles :options as a hash" do
       @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, options: {
         abort_multipart_upload: { request_payer: "bob" }

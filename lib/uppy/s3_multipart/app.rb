@@ -103,7 +103,14 @@ module Uppy
           r.delete String do |upload_id|
             key = param!("key")
 
-            client_call(:abort_multipart_upload, upload_id: upload_id, key: key)
+            begin
+              client_call(:abort_multipart_upload, upload_id: upload_id, key: key)
+            rescue Aws::S3::Errors::NoSuchUpload
+              error!(
+                "Upload doesn't exist for \"key\" parameter",
+                status: 404
+              )
+            end
 
             {}
           end
@@ -128,8 +135,8 @@ module Uppy
           value
         end
 
-        def error!(message)
-          request.halt 400, { error: message }
+        def error!(message, status: 400)
+          request.halt status, { error: message }
         end
       end
     end

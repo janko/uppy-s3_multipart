@@ -75,6 +75,19 @@ module Uppy
             end
           end
 
+          # GET /s3/multipart/:uploadId/batch
+          r.get String, "batch" do |upload_id|
+            key = param!("key")
+            part_numbers = param!("partNumbers").split(",")
+
+            batch = part_numbers.map do |part_number|
+              result = client_call(:prepare_upload_part, upload_id: upload_id, key: key, part_number: part_number)
+              [part_number, result.fetch(:url)]
+            end.to_h
+
+            { presignedUrls: batch }
+          end
+
           # GET /s3/multipart/:uploadId/:partNumber
           r.get String, String do |upload_id, part_number|
             key = param!("key")

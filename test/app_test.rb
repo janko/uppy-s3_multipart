@@ -187,6 +187,62 @@ describe Uppy::S3Multipart::App do
     end
   end
 
+  describe "GET /s3/multipart/:uploadId/batch" do
+    it "returns presigned urls for batch part upload" do
+      response = app.get "/s3/multipart/foo/batch", query: { key: "bar", partNumbers: "1,2" }
+
+      assert_equal 200,                response.status
+      assert_equal "application/json", response.headers["Content-Type"]
+
+      assert_match URI.regexp, response.body_json["presignedUrls"]["1"]
+      assert_match URI.regexp, response.body_json["presignedUrls"]["2"]
+    end
+
+    it "returns error response when 'key' parameter is missing" do
+      response = app.get "/s3/multipart/foo/batch", query: { partNumbers: "1,2" }
+
+      assert_equal 400,                response.status
+      assert_equal "application/json", response.headers["Content-Type"]
+
+      assert_equal "Missing \"key\" parameter", response.body_json["error"]
+    end
+
+    it "returns error response when 'partNumbers' parameter is missing" do
+      response = app.get "/s3/multipart/foo/batch", query: { key: "bar" }
+
+      assert_equal 400,                response.status
+      assert_equal "application/json", response.headers["Content-Type"]
+
+      assert_equal "Missing \"partNumbers\" parameter", response.body_json["error"]
+    end
+
+    it "handles :options as a hash" do
+      @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, options: {
+        prepare_upload_part: { expires_in: 10 }
+      })
+
+      response = app.get "/s3/multipart/foo/batch", query: { key: "bar", partNumbers: "1,2" }
+
+      assert_match "X-Amz-Expires=10", response.body_json["presignedUrls"]["1"]
+      assert_match "X-Amz-Expires=10", response.body_json["presignedUrls"]["2"]
+    end
+
+    it "handles :options as a block" do
+      @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, options: {
+        prepare_upload_part: -> (request) {
+          assert_kind_of Rack::Request, request
+          { expires_in: 10 }
+        }
+      })
+
+      response = app.get "/s3/multipart/foo/batch", query: { key: "bar", partNumbers: "1,2" }
+
+      assert_match "X-Amz-Expires=10", response.body_json["presignedUrls"]["1"]
+      assert_match "X-Amz-Expires=10", response.body_json["presignedUrls"]["2"]
+    end
+  end
+
+
   describe "GET /s3/multipart/:uploadId/:partNumber" do
     it "returns presigned url for part upload" do
       response = app.get "/s3/multipart/foo/1", query: { key: "bar" }

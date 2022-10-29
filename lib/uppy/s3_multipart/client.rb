@@ -25,7 +25,7 @@ module Uppy
       end
 
       def prepare_upload_part(upload_id:, key:, part_number:, **options)
-        presigned_url = presigner.presigned_url "upload_part",
+        presigned_url = presigner.presigned_url :upload_part,
           bucket: bucket.name,
           key: object(key).key,
           upload_id: upload_id,

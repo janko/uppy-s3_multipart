@@ -1,14 +1,16 @@
 require "test_helper"
 require "aws-sdk-s3"
-require "rack/test_app"
+require "rack"
+require "rack/test"
 
 describe Uppy::S3Multipart::App do
+  include Rack::Test::Methods
+
   def app
     app = Rack::Builder.new
     app.use Rack::Lint
-    app.run Rack::URLMap.new("/s3/multipart" => @endpoint)
-
-    Rack::TestApp.wrap(app)
+    app.run Rack::URLMap.new("/s3/multipart" => -> (env) { @endpoint.call(env) })
+    app
   end
 
   before do
@@ -17,11 +19,13 @@ describe Uppy::S3Multipart::App do
 
     @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket)
     @s3       = @bucket.client
+
+    header "Content-Type", "application/json"
   end
 
   describe "POST /s3/multipart" do
     it "creates a multipart upload" do
-      response = app.post "/s3/multipart"
+      post "/s3/multipart"
 
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_match /^\w{32}$/,               @s3.api_requests[0][:params][:key]
@@ -30,48 +34,48 @@ describe Uppy::S3Multipart::App do
     it "returns multipart upload id and key" do
       @s3.stub_responses(:create_multipart_upload, { upload_id: "foo", key: "bar" })
 
-      response = app.post "/s3/multipart"
+      post "/s3/multipart"
 
-      assert_equal 200,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 200,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "foo",      response.body_json["uploadId"]
-      assert_match /^\w{32}$/, response.body_json["key"]
+      assert_equal "foo",      JSON.parse(last_response.body)["uploadId"]
+      assert_match /^\w{32}$/, JSON.parse(last_response.body)["key"]
     end
 
     it "handles 'type' JSON body parameter" do
-      response = app.post "/s3/multipart", json: { type: "text/plain" }
+      post "/s3/multipart", JSON.generate({ type: "text/plain" })
 
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "text/plain",             @s3.api_requests[0][:params][:content_type]
     end
 
     it "handles 'filename' JSON body parameter" do
-      response = app.post "/s3/multipart", json: { filename: "nature.jpg" }
+      post "/s3/multipart", JSON.generate({ filename: "nature.jpg" })
 
       expected_content_disposition = %(inline; filename="nature.jpg"; filename*=UTF-8''nature.jpg)
 
       assert_equal :create_multipart_upload,     @s3.api_requests[0][:operation_name]
       assert_equal expected_content_disposition, @s3.api_requests[0][:params][:content_disposition]
 
-      assert_match /^\w{32}\.jpg$/, response.body_json["key"]
+      assert_match /^\w{32}\.jpg$/, JSON.parse(last_response.body)["key"]
     end
 
     it "handles :prefix option" do
       @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, prefix: "prefix")
 
-      response = app.post "/s3/multipart"
+      post "/s3/multipart"
 
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_match /^prefix\/\w{32}/,        @s3.api_requests[0][:params][:key]
 
-      assert_match /^prefix\/\w{32}$/, response.body_json["key"]
+      assert_match /^prefix\/\w{32}$/, JSON.parse(last_response.body)["key"]
     end
 
     it "handles :public option" do
       @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, public: true)
 
-      response = app.post "/s3/multipart"
+      post "/s3/multipart"
 
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "public-read",            @s3.api_requests[0][:params][:acl]
@@ -82,7 +86,7 @@ describe Uppy::S3Multipart::App do
         create_multipart_upload: { acl: "public-read" }
       })
 
-      response = app.post "/s3/multipart"
+      post "/s3/multipart"
 
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "public-read",            @s3.api_requests[0][:params][:acl]
@@ -96,14 +100,14 @@ describe Uppy::S3Multipart::App do
         }
       })
 
-      response = app.post "/s3/multipart"
+      post "/s3/multipart"
 
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "public-read",            @s3.api_requests[0][:params][:acl]
     end
 
     it "works with a trailing slash (for Rails)" do
-      response = app.post "/s3/multipart/"
+      post "/s3/multipart/"
 
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_match /^\w{32}$/,               @s3.api_requests[0][:params][:key]
@@ -112,27 +116,27 @@ describe Uppy::S3Multipart::App do
 
   describe "OPTIONS /s3/multipart/:uploadId/:partNumber" do
     it "returns an empty response" do
-      response = app.options "/s3/multipart/foo/1"
+      options "/s3/multipart/foo/1"
 
-      assert_equal 204,      response.status
-      assert_equal Hash.new, response.headers
-      assert_equal "",       response.body_binary
+      assert_equal 204,      last_response.status
+      assert_equal Hash.new, last_response.headers
+      assert_equal "",       last_response.body
     end
   end
 
   describe "OPTIONS /s3/multipart" do
     it "returns an empty response" do
-      response = app.options "/s3/multipart"
+      options "/s3/multipart"
 
-      assert_equal 204,      response.status
-      assert_equal Hash.new, response.headers
-      assert_equal "",       response.body_binary
+      assert_equal 204,      last_response.status
+      assert_equal Hash.new, last_response.headers
+      assert_equal "",       last_response.body
     end
   end
 
   describe "GET /s3/multipart/:uploadId" do
     it "fetches multipart parts" do
-      response = app.get "/s3/multipart/foo", query: { key: "bar" }
+      get "/s3/multipart/foo", { key: "bar" }
 
       assert_equal :list_parts, @s3.api_requests[0][:operation_name]
       assert_equal "foo",       @s3.api_requests[0][:params][:upload_id]
@@ -142,23 +146,23 @@ describe Uppy::S3Multipart::App do
     it "returns multipart parts" do
       @s3.stub_responses(:list_parts, { parts: [ { part_number: 1, size: 123, etag: "etag1" } ] })
 
-      response = app.get "/s3/multipart/foo", query: { key: "bar" }
+      get "/s3/multipart/foo", { key: "bar" }
 
-      assert_equal 200,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 200,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal 1,       response.body_json[0]["PartNumber"]
-      assert_equal 123,     response.body_json[0]["Size"]
-      assert_equal "etag1", response.body_json[0]["ETag"]
+      assert_equal 1,       JSON.parse(last_response.body)[0]["PartNumber"]
+      assert_equal 123,     JSON.parse(last_response.body)[0]["Size"]
+      assert_equal "etag1", JSON.parse(last_response.body)[0]["ETag"]
     end
 
     it "returns error response when 'key' parameter is missing" do
-      response = app.get "/s3/multipart/foo"
+      get "/s3/multipart/foo"
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "Missing \"key\" parameter", response.body_json["error"]
+      assert_equal "Missing \"key\" parameter", JSON.parse(last_response.body)["error"]
     end
 
     it "handles :options as a hash" do
@@ -166,7 +170,7 @@ describe Uppy::S3Multipart::App do
         list_parts: { max_parts: 5 }
       })
 
-      response = app.get "/s3/multipart/foo", query: { key: "bar" }
+      get "/s3/multipart/foo", { key: "bar" }
 
       assert_equal :list_parts,   @s3.api_requests[0][:operation_name]
       assert_equal 5,             @s3.api_requests[0][:params][:max_parts]
@@ -180,7 +184,7 @@ describe Uppy::S3Multipart::App do
         }
       })
 
-      response = app.get "/s3/multipart/foo", query: { key: "bar" }
+      get "/s3/multipart/foo", { key: "bar" }
 
       assert_equal :list_parts,   @s3.api_requests[0][:operation_name]
       assert_equal 5,             @s3.api_requests[0][:params][:max_parts]
@@ -189,31 +193,31 @@ describe Uppy::S3Multipart::App do
 
   describe "GET /s3/multipart/:uploadId/batch" do
     it "returns presigned urls for batch part upload" do
-      response = app.get "/s3/multipart/foo/batch", query: { key: "bar", partNumbers: "1,2" }
+      get "/s3/multipart/foo/batch", { key: "bar", partNumbers: "1,2" }
 
-      assert_equal 200,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 200,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_match URI.regexp, response.body_json["presignedUrls"]["1"]
-      assert_match URI.regexp, response.body_json["presignedUrls"]["2"]
+      assert_match URI.regexp, JSON.parse(last_response.body)["presignedUrls"]["1"]
+      assert_match URI.regexp, JSON.parse(last_response.body)["presignedUrls"]["2"]
     end
 
     it "returns error response when 'key' parameter is missing" do
-      response = app.get "/s3/multipart/foo/batch", query: { partNumbers: "1,2" }
+      get "/s3/multipart/foo/batch", { partNumbers: "1,2" }
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "Missing \"key\" parameter", response.body_json["error"]
+      assert_equal "Missing \"key\" parameter", JSON.parse(last_response.body)["error"]
     end
 
     it "returns error response when 'partNumbers' parameter is missing" do
-      response = app.get "/s3/multipart/foo/batch", query: { key: "bar" }
+      get "/s3/multipart/foo/batch", { key: "bar" }
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "Missing \"partNumbers\" parameter", response.body_json["error"]
+      assert_equal "Missing \"partNumbers\" parameter", JSON.parse(last_response.body)["error"]
     end
 
     it "handles :options as a hash" do
@@ -221,10 +225,10 @@ describe Uppy::S3Multipart::App do
         prepare_upload_part: { expires_in: 10 }
       })
 
-      response = app.get "/s3/multipart/foo/batch", query: { key: "bar", partNumbers: "1,2" }
+      get "/s3/multipart/foo/batch", { key: "bar", partNumbers: "1,2" }
 
-      assert_match "X-Amz-Expires=10", response.body_json["presignedUrls"]["1"]
-      assert_match "X-Amz-Expires=10", response.body_json["presignedUrls"]["2"]
+      assert_match "X-Amz-Expires=10", JSON.parse(last_response.body)["presignedUrls"]["1"]
+      assert_match "X-Amz-Expires=10", JSON.parse(last_response.body)["presignedUrls"]["2"]
     end
 
     it "handles :options as a block" do
@@ -235,31 +239,31 @@ describe Uppy::S3Multipart::App do
         }
       })
 
-      response = app.get "/s3/multipart/foo/batch", query: { key: "bar", partNumbers: "1,2" }
+      get "/s3/multipart/foo/batch", { key: "bar", partNumbers: "1,2" }
 
-      assert_match "X-Amz-Expires=10", response.body_json["presignedUrls"]["1"]
-      assert_match "X-Amz-Expires=10", response.body_json["presignedUrls"]["2"]
+      assert_match "X-Amz-Expires=10", JSON.parse(last_response.body)["presignedUrls"]["1"]
+      assert_match "X-Amz-Expires=10", JSON.parse(last_response.body)["presignedUrls"]["2"]
     end
   end
 
 
   describe "GET /s3/multipart/:uploadId/:partNumber" do
     it "returns presigned url for part upload" do
-      response = app.get "/s3/multipart/foo/1", query: { key: "bar" }
+      get "/s3/multipart/foo/1", { key: "bar" }
 
-      assert_equal 200,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 200,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_match URI.regexp, response.body_json["url"]
+      assert_match URI.regexp, JSON.parse(last_response.body)["url"]
     end
 
     it "returns error response when 'key' parameter is missing" do
-      response = app.get "/s3/multipart/foo/1"
+      get "/s3/multipart/foo/1"
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "Missing \"key\" parameter", response.body_json["error"]
+      assert_equal "Missing \"key\" parameter", JSON.parse(last_response.body)["error"]
     end
 
     it "handles :options as a hash" do
@@ -267,9 +271,9 @@ describe Uppy::S3Multipart::App do
         prepare_upload_part: { expires_in: 10 }
       })
 
-      response = app.get "/s3/multipart/foo/1", query: { key: "bar" }
+      get "/s3/multipart/foo/1", { key: "bar" }
 
-      assert_match "X-Amz-Expires=10", response.body_json["url"]
+      assert_match "X-Amz-Expires=10", JSON.parse(last_response.body)["url"]
     end
 
     it "handles :options as a block" do
@@ -280,16 +284,17 @@ describe Uppy::S3Multipart::App do
         }
       })
 
-      response = app.get "/s3/multipart/foo/1", query: { key: "bar" }
+      get "/s3/multipart/foo/1", { key: "bar" }
 
-      assert_match "X-Amz-Expires=10", response.body_json["url"]
+      assert_match "X-Amz-Expires=10", JSON.parse(last_response.body)["url"]
     end
   end
 
   describe "POST /s3/multipart/:uploadId/complete" do
     it "completes the multipart upload" do
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" },
-        json: { parts: [{ PartNumber: 1, ETag: "etag1" }] }
+      post "/s3/multipart/foo/complete",
+        JSON.generate({ parts: [{ PartNumber: 1, ETag: "etag1" }] }),
+        query_params: { key: "bar" }
 
       assert_equal :complete_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "foo",                      @s3.api_requests[0][:params][:upload_id]
@@ -299,12 +304,12 @@ describe Uppy::S3Multipart::App do
     end
 
     it "returns presigned URL to the object" do
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" }, json: { parts: [] }
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [] }), query_params: { key: "bar" }
 
-      assert_equal 200,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 200,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_match URI.regexp, response.body_json["location"]
+      assert_match URI.regexp, JSON.parse(last_response.body)["location"]
     end
 
     it "applies options for object URL" do
@@ -312,63 +317,61 @@ describe Uppy::S3Multipart::App do
         object_url: { response_content_disposition: "attachment" }
       })
 
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" }, json: { parts: [] }
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [] }), query_params: { key: "bar" }
 
-      assert_equal 200,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 200,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_includes response.body_json["location"], "response-content-disposition"
+      assert_includes JSON.parse(last_response.body)["location"], "response-content-disposition"
     end
 
     it "handles :public option" do
       @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, public: true)
 
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" }, json: { parts: [] }
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [] }), query_params: { key: "bar" }
 
-      assert_equal 200,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 200,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      uri = URI.parse(response.body_json["location"])
+      uri = URI.parse(JSON.parse(last_response.body)["location"])
 
       assert_nil uri.query
     end
 
     it "returns error response when 'key' parameter is missing" do
-      response = app.post "/s3/multipart/foo/complete", json: { parts: [] }
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [] })
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "Missing \"key\" parameter", response.body_json["error"]
+      assert_equal "Missing \"key\" parameter", JSON.parse(last_response.body)["error"]
     end
 
     it "returns error response when 'parts' parameter is missing" do
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" }
+      post "/s3/multipart/foo/complete", nil, query_params: { key: "bar" }
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "Missing \"parts\" parameter", response.body_json["error"]
+      assert_equal "Missing \"parts\" parameter", JSON.parse(last_response.body)["error"]
     end
 
     it "returns error response when a part is missing 'PartNumber' field" do
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" },
-        json: { parts: [{ ETag: 1 }] }
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [{ ETag: 1 }] }), query_params: { key: "bar" }
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "At least one part is missing \"PartNumber\" or \"ETag\" field", response.body_json["error"]
+      assert_equal "At least one part is missing \"PartNumber\" or \"ETag\" field", JSON.parse(last_response.body)["error"]
     end
 
     it "returns error response when a part is missing 'ETag' field" do
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" },
-        json: { parts: [{ PartNumber: 1 }] }
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [{ PartNumber: 1 }] }), query_params: { key: "bar" }
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "At least one part is missing \"PartNumber\" or \"ETag\" field", response.body_json["error"]
+      assert_equal "At least one part is missing \"PartNumber\" or \"ETag\" field", JSON.parse(last_response.body)["error"]
     end
 
     it "handles :options as a hash" do
@@ -376,7 +379,7 @@ describe Uppy::S3Multipart::App do
         complete_multipart_upload: { request_payer: "bob" }
       })
 
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" }, json: { parts: [] }
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [] }), query_params: { key: "bar" }
 
       assert_equal :complete_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "bob",                      @s3.api_requests[0][:params][:request_payer]
@@ -390,7 +393,7 @@ describe Uppy::S3Multipart::App do
         }
       })
 
-      response = app.post "/s3/multipart/foo/complete", query: { key: "bar" }, json: { parts: [] }
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [] }), query_params: { key: "bar" }
 
       assert_equal :complete_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "bob",                      @s3.api_requests[0][:params][:request_payer]
@@ -399,7 +402,7 @@ describe Uppy::S3Multipart::App do
 
   describe "DELETE /s3/multipart/:uploadId" do
     it "aborts the multipart uplaod" do
-      response = app.delete "/s3/multipart/foo", query: { key: "bar" }
+      delete "/s3/multipart/foo", nil, query_params: { key: "bar" }
 
       assert_equal :abort_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "foo",                   @s3.api_requests[0][:params][:upload_id]
@@ -407,32 +410,32 @@ describe Uppy::S3Multipart::App do
     end
 
     it "returns empty result" do
-      response = app.delete "/s3/multipart/foo", query: { key: "bar" }
+      delete "/s3/multipart/foo", nil, query_params: { key: "bar" }
 
-      assert_equal 200,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 200,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal Hash.new, response.body_json
+      assert_equal Hash.new, JSON.parse(last_response.body)
     end
 
     it "returns error response when 'key' parameter is missing" do
-      response = app.delete "/s3/multipart/foo"
+      delete "/s3/multipart/foo"
 
-      assert_equal 400,                response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 400,                last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "Missing \"key\" parameter", response.body_json["error"]
+      assert_equal "Missing \"key\" parameter", JSON.parse(last_response.body)["error"]
     end
 
     it "returns error response when 'key' parameter is for an upload that doesn't exist" do
       @s3.stub_responses(:abort_multipart_upload, 'NoSuchUpload')
 
-      response = app.delete "/s3/multipart/null", query: { key: "null" }
+      delete "/s3/multipart/null", nil, query_params: { key: "null" }
 
-      assert_equal 404, response.status
-      assert_equal "application/json", response.headers["Content-Type"]
+      assert_equal 404, last_response.status
+      assert_equal "application/json", last_response.headers["Content-Type"]
 
-      assert_equal "Upload doesn't exist for \"key\" parameter", response.body_json["error"]
+      assert_equal "Upload doesn't exist for \"key\" parameter", JSON.parse(last_response.body)["error"]
     end
 
     it "handles :options as a hash" do
@@ -440,7 +443,7 @@ describe Uppy::S3Multipart::App do
         abort_multipart_upload: { request_payer: "bob" }
       })
 
-      response = app.delete "/s3/multipart/foo", query: { key: "bar" }
+      delete "/s3/multipart/foo", nil, query_params: { key: "bar" }
 
       assert_equal :abort_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "bob",                   @s3.api_requests[0][:params][:request_payer]
@@ -454,7 +457,7 @@ describe Uppy::S3Multipart::App do
         }
       })
 
-      response = app.delete "/s3/multipart/foo", query: { key: "bar" }
+      delete "/s3/multipart/foo", nil, query_params: { key: "bar" }
 
       assert_equal :abort_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_equal "bob",                   @s3.api_requests[0][:params][:request_payer]

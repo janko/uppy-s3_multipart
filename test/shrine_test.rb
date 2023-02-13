@@ -5,9 +5,12 @@ require "shrine/plugins/uppy_s3_multipart"
 require "shrine/storage/s3"
 require "shrine/storage/memory"
 
-require "rack/test_app"
+require "rack"
+require "rack/test"
 
 describe Shrine::Plugins::UppyS3Multipart do
+  include Rack::Test::Methods
+
   def s3(**options)
     Shrine::Storage::S3.new(
       bucket: "my-bucket",
@@ -16,9 +19,10 @@ describe Shrine::Plugins::UppyS3Multipart do
     )
   end
 
-  def test_app(**options)
-    app = @shrine.uppy_s3_multipart(:s3, **options)
-    Rack::TestApp.wrap(Rack::Lint.new(app))
+  def app
+    app = Rack::Builder.new
+    app.run -> (env) { @app.call(env) }
+    app
   end
 
   def client
@@ -29,6 +33,8 @@ describe Shrine::Plugins::UppyS3Multipart do
     @shrine = Class.new(Shrine)
     @shrine.storages[:s3] = s3
     @shrine.plugin :uppy_s3_multipart
+
+    @app = @shrine.uppy_s3_multipart(:s3)
   end
 
   it "returns the app" do
@@ -36,8 +42,7 @@ describe Shrine::Plugins::UppyS3Multipart do
   end
 
   it "passes the bucket" do
-    app = test_app
-    app.post "/multipart"
+    post "/multipart"
 
     assert_equal :create_multipart_upload, client.api_requests[0][:operation_name]
     assert_equal "my-bucket",              client.api_requests[0][:params][:bucket]
@@ -45,9 +50,9 @@ describe Shrine::Plugins::UppyS3Multipart do
 
   it "passes the prefix" do
     @shrine.storages[:s3] = s3(prefix: "prefix")
+    @app = @shrine.uppy_s3_multipart(:s3)
 
-    app = test_app
-    app.post "/multipart"
+    post "/multipart"
 
     assert_equal :create_multipart_upload, client.api_requests[0][:operation_name]
     assert_match /^prefix\/\w+$/,          client.api_requests[0][:params][:key]
@@ -55,9 +60,9 @@ describe Shrine::Plugins::UppyS3Multipart do
 
   it "passes the public" do
     @shrine.storages[:s3] = s3(public: true)
+    @app = @shrine.uppy_s3_multipart(:s3)
 
-    app = test_app
-    app.post "/multipart"
+    post "/multipart"
 
     assert_equal :create_multipart_upload, client.api_requests[0][:operation_name]
     assert_match "public-read",            client.api_requests[0][:params][:acl]
@@ -67,17 +72,17 @@ describe Shrine::Plugins::UppyS3Multipart do
     @shrine.plugin :uppy_s3_multipart, options: {
       create_multipart_upload: { acl: "public-read" },
     }
+    @app = @shrine.uppy_s3_multipart(:s3)
 
-    app = test_app
-    app.post "/multipart"
+    post "/multipart"
 
     assert_equal :create_multipart_upload, client.api_requests[0][:operation_name]
     assert_equal "public-read",            client.api_requests[0][:params][:acl]
   end
 
   it "allows overriding app options" do
-    app = test_app(options: { create_multipart_upload: { acl: "public-read" } })
-    app.post "/multipart"
+    @app = @shrine.uppy_s3_multipart(:s3, options: { create_multipart_upload: { acl: "public-read" } })
+    post "/multipart"
 
     assert_equal :create_multipart_upload, client.api_requests[0][:operation_name]
     assert_equal "public-read",            client.api_requests[0][:params][:acl]

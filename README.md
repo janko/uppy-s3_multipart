@@ -22,36 +22,20 @@ following:
 
 ```json
 [
-    {
-        "AllowedHeaders": [
-            "content-type",
-            "x-amz-content-sha256",
-            "x-amz-date"
-        ],
-        "AllowedMethods": [
-            "GET",
-            "POST",
-            "PUT"
-        ],
-        "AllowedOrigins": [
-            "https://my-app.com"
-        ],
-        "ExposeHeaders": [
-            "ETag"
-        ],
-        "MaxAgeSeconds": 3000
-    },
-    {
-        "AllowedHeaders": [],
-        "AllowedMethods": [
-            "GET"
-        ],
-        "AllowedOrigins": [
-            "*"
-        ],
-        "ExposeHeaders": [],
-        "MaxAgeSeconds": 3000
-    }
+  {
+    "AllowedHeaders": ["content-type", "x-amz-content-sha256", "x-amz-date"],
+    "AllowedMethods": ["GET", "POST", "PUT"],
+    "AllowedOrigins": ["https://my-app.com"],
+    "ExposeHeaders": ["ETag", "Location"],
+    "MaxAgeSeconds": 3000
+  },
+  {
+    "AllowedHeaders": [],
+    "AllowedMethods": ["GET"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": [],
+    "MaxAgeSeconds": 3000
+  }
 ]
 ```
 

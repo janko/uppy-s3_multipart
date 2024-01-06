@@ -22,36 +22,20 @@ following:
 
 ```json
 [
-    {
-        "AllowedHeaders": [
-            "content-type",
-            "x-amz-content-sha256",
-            "x-amz-date"
-        ],
-        "AllowedMethods": [
-            "GET",
-            "POST",
-            "PUT"
-        ],
-        "AllowedOrigins": [
-            "https://my-app.com"
-        ],
-        "ExposeHeaders": [
-            "ETag"
-        ],
-        "MaxAgeSeconds": 3000
-    },
-    {
-        "AllowedHeaders": [],
-        "AllowedMethods": [
-            "GET"
-        ],
-        "AllowedOrigins": [
-            "*"
-        ],
-        "ExposeHeaders": [],
-        "MaxAgeSeconds": 3000
-    }
+  {
+    "AllowedHeaders": ["content-type", "x-amz-content-sha256", "x-amz-date"],
+    "AllowedMethods": ["GET", "POST", "PUT"],
+    "AllowedOrigins": ["https://my-app.com"],
+    "ExposeHeaders": ["ETag", "Location"],
+    "MaxAgeSeconds": 3000
+  },
+  {
+    "AllowedHeaders": [],
+    "AllowedMethods": ["GET"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": [],
+    "MaxAgeSeconds": 3000
+  }
 ]
 ```
 
@@ -111,8 +95,8 @@ configuration you can point `companionUrl` to your app's URL:
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  companionUrl: '/',
-})
+  companionUrl: "/",
+});
 ```
 
 ### Shrine
@@ -151,8 +135,8 @@ Now in your Uppy configuration point `companionUrl` to your app's URL:
 ```js
 // ...
 uppy.use(Uppy.AwsS3Multipart, {
-  companionUrl: '/',
-})
+  companionUrl: "/",
+});
 ```
 
 In the `upload-success` Uppy callback, you can construct the Shrine uploaded
@@ -160,18 +144,18 @@ file data (this example assumes your temporary Shrine S3 storage has `prefix:
 "cache"` set):
 
 ```js
-uppy.on('upload-success', function (file, response) {
+uppy.on("upload-success", function (file, response) {
   var uploadedFileData = JSON.stringify({
     id: response.uploadURL.match(/\/cache\/([^\?]+)/)[1], // extract key without prefix
-    storage: 'cache',
+    storage: "cache",
     metadata: {
-      size:      file.size,
-      filename:  file.name,
+      size: file.size,
+      filename: file.name,
       mime_type: file.type,
-    }
-  })
+    },
+  });
   // ...
-})
+});
 ```
 
 See [Adding Direct S3 Uploads] for an example of a complete Uppy setup with
@@ -349,13 +333,13 @@ client.create_multipart_upload(key: "foo", **options)
 
 Accepts:
 
-* `:key` – object key
-* additional options for [`Aws::S3::Client#create_multipart_upload`]
+- `:key` – object key
+- additional options for [`Aws::S3::Client#create_multipart_upload`]
 
 Returns:
 
-* `:upload_id` – id of the created multipart upload
-* `:key` – object key
+- `:upload_id` – id of the created multipart upload
+- `:key` – object key
 
 #### `#list_parts`
 
@@ -370,13 +354,13 @@ client.list_parts(upload_id: "MultipartUploadId", key: "foo", **options)
 
 Accepts:
 
-* `:upload_id` – multipart upload id
-* `:key` – object key
-* additional options for [`Aws::S3::Client#list_parts`]
+- `:upload_id` – multipart upload id
+- `:key` – object key
+- additional options for [`Aws::S3::Client#list_parts`]
 
 Returns:
 
-* array of parts
+- array of parts
 
   - `:part_number` – position of the part
   - `:size` – filesize of the part
@@ -393,14 +377,14 @@ client.prepare_upload_part(upload_id: "MultipartUploadId", key: "foo", part_numb
 
 Accepts:
 
-* `:upload_id` – multipart upload id
-* `:key` – object key
-* `:part_number` – number of the next part
-* additional options for [`Aws::S3::Client#upload_part`] and [`Aws::S3::Presigner#presigned_url`]
+- `:upload_id` – multipart upload id
+- `:key` – object key
+- `:part_number` – number of the next part
+- additional options for [`Aws::S3::Client#upload_part`] and [`Aws::S3::Presigner#presigned_url`]
 
 Returns:
 
-* `:url` – endpoint that should be used for uploading a new multipart part via a `PUT` request
+- `:url` – endpoint that should be used for uploading a new multipart part via a `PUT` request
 
 #### `#complete_multipart_upload`
 
@@ -413,14 +397,14 @@ client.complete_multipart_upload(upload_id: upload_id, key: key, parts: [{ part_
 
 Accepts:
 
-* `:upload_id` – multipart upload id
-* `:key` – object key
-* `:parts` – list of all uploaded parts, consisting of `:part_number` and `:etag`
-* additional options for [`Aws::S3::Client#complete_multipart_upload`]
+- `:upload_id` – multipart upload id
+- `:key` – object key
+- `:parts` – list of all uploaded parts, consisting of `:part_number` and `:etag`
+- additional options for [`Aws::S3::Client#complete_multipart_upload`]
 
 Returns:
 
-* `:location` – URL to the uploaded object
+- `:location` – URL to the uploaded object
 
 #### `#object_url`
 
@@ -436,13 +420,13 @@ the response.
 
 Accepts:
 
-* `:key` – object key
-* `:public` – for generating a public URL (default is presigned expiring URL)
-* additional options for [`Aws::S3::Object#presigned_url`] and [`Aws::S3::Client#get_object`]
+- `:key` – object key
+- `:public` – for generating a public URL (default is presigned expiring URL)
+- additional options for [`Aws::S3::Object#presigned_url`] and [`Aws::S3::Client#get_object`]
 
 Returns:
 
-* URL to the object
+- URL to the object
 
 #### `#abort_multipart_upload`
 
@@ -455,9 +439,9 @@ client.abort_multipart_upload(upload_id: upload_id, key: key, **options)
 
 Accepts:
 
-* `:upload_id` – multipart upload id
-* `:key` – object key
-* additional options for [`Aws::S3::Client#abort_multipart_upload`]
+- `:upload_id` – multipart upload id
+- `:key` – object key
+- additional options for [`Aws::S3::Client#abort_multipart_upload`]
 
 ## Contributing
 

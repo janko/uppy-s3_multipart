@@ -5,8 +5,9 @@ module Uppy
     class Client
       attr_reader :bucket
 
-      def initialize(bucket:)
-        @bucket = bucket
+      def initialize(bucket:, presigned_host: nil)
+        @bucket           = bucket
+        @presigned_client = build_presigned_client(bucket.client, presigned_host) if presigned_host
       end
 
       def create_multipart_upload(key:, **options)
@@ -50,7 +51,7 @@ module Uppy
         if public
           object(key).public_url(**options)
         else
-          object(key).presigned_url(:get, **options)
+          presigner.presigned_url(:get_object, bucket: bucket.name, key: object(key).key, **options)
         end
       end
 
@@ -72,7 +73,19 @@ module Uppy
       end
 
       def presigner
-        Aws::S3::Presigner.new(client: client)
+        Aws::S3::Presigner.new(client: @presigned_client || client)
+      end
+
+      def build_presigned_client(client, host)
+        endpoint      = client.config.endpoint.dup
+        endpoint.host = host
+
+        Aws::S3::Client.new(
+          credentials:      client.config.credentials,
+          region:           client.config.region,
+          endpoint:         endpoint,
+          force_path_style: client.config.force_path_style,
+        )
       end
 
       def client

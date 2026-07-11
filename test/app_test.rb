@@ -288,6 +288,16 @@ describe Uppy::S3Multipart::App do
 
       assert_match "X-Amz-Expires=10", JSON.parse(last_response.body)["url"]
     end
+
+    it "uses the :presigned_host for signing when given" do
+      @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, presigned_host: "localhost")
+
+      get "/s3/multipart/foo/1", { key: "bar" }
+
+      uri = URI.parse(JSON.parse(last_response.body)["url"])
+
+      assert_equal "my-bucket.localhost", uri.host
+    end
   end
 
   describe "POST /s3/multipart/:uploadId/complete" do

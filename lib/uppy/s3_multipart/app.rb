@@ -8,9 +8,9 @@ require "securerandom"
 module Uppy
   module S3Multipart
     class App
-      def initialize(bucket:, prefix: nil, public: nil, options: {})
+      def initialize(bucket:, prefix: nil, public: nil, options: {}, presigned_host: nil)
         @router = Class.new(Router)
-        @router.opts[:client]  = Client.new(bucket: bucket)
+        @router.opts[:client]  = Client.new(bucket: bucket, presigned_host: presigned_host)
         @router.opts[:prefix]  = prefix
         @router.opts[:public]  = public
         @router.opts[:options] = options

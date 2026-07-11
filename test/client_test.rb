@@ -84,6 +84,16 @@ describe Uppy::S3Multipart::Client do
 
       assert_match %r{X-Amz-SignedHeaders=content-md5}, uri.query
     end
+
+    it "uses the :presigned_host for signing when given" do
+      client = Uppy::S3Multipart::Client.new(bucket: @client.bucket, presigned_host: "localhost")
+
+      result = client.prepare_upload_part(upload_id: "bar", key: "foo", part_number: 1)
+
+      uri = URI.parse(result.fetch(:url))
+
+      assert_equal "my-bucket.localhost", uri.host
+    end
   end
 
   describe "#complete_multipart_upload" do
@@ -144,6 +154,15 @@ describe Uppy::S3Multipart::Client do
       assert_includes uri.host, "my-bucket"
       assert_equal "/foo", uri.path
       assert_includes uri.query, "response-content-disposition"
+    end
+
+    it "uses the :presigned_host for signing when given" do
+      client = Uppy::S3Multipart::Client.new(bucket: @client.bucket, presigned_host: "localhost")
+
+      url = client.object_url(key: "foo")
+      uri = URI.parse(url)
+
+      assert_equal "my-bucket.localhost", uri.host
     end
   end
 

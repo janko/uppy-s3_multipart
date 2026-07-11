@@ -311,6 +311,37 @@ Shrine.storages = {
 }
 ```
 
+#### `:presigned_host`
+
+The `:presigned_host` option overrides the host used when generating
+presigned URLs (`#prepare_upload_part` and `#object_url`), while the rest of
+the operations continue to use the endpoint configured on the `:bucket`
+client.
+
+This is useful when the S3-compatible endpoint reachable by your app isn't
+the same one reachable by the browser, for example when running [Minio] in
+Docker Compose and accessing it via a different host than the app container
+does:
+
+```rb
+bucket = Aws::S3::Bucket.new(
+  name:              "<MINIO_BUCKET>",
+  access_key_id:     "<MINIO_ACCESS_KEY>",
+  secret_access_key: "<MINIO_SECRET_KEY>",
+  endpoint:          "http://minio:9000", # reachable from the app container
+  region:            "us-east-1",
+  force_path_style:  true,
+)
+
+Uppy::S3Multipart::App.new(bucket: bucket, presigned_host: "localhost")
+```
+
+In the Shrine plugin it can be passed the same way as other options:
+
+```rb
+Shrine.uppy_s3_multipart(:cache, presigned_host: "localhost")
+```
+
 ## Client
 
 If you would rather implement the endpoints yourself, you can utilize the

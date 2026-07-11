@@ -2,7 +2,7 @@ Gem::Specification.new do |gem|
   gem.name         = "uppy-s3_multipart"
   gem.version      = "1.2.1"
 
-  gem.required_ruby_version = ">= 2.3"
+  gem.required_ruby_version = ">= 2.6"
 
   gem.summary      = "Provides a Rack application that implements endpoints for the AwsS3Multipart Uppy plugin."
   gem.homepage     = "https://github.com/janko/uppy-s3_multipart"

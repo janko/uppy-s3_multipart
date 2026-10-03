@@ -114,7 +114,7 @@ module Uppy
 
             object_url = client_call(:object_url, key: key, public: opts[:public])
 
-            { location: object_url }
+            { location: object_url, key: key }
           end
 
           # DELETE /s3/multipart/:uploadId

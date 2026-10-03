@@ -322,6 +322,13 @@ describe Uppy::S3Multipart::App do
       assert_match URI.regexp, JSON.parse(last_response.body)["location"]
     end
 
+    it "returns the object key" do
+      post "/s3/multipart/foo/complete", JSON.generate({ parts: [] }), query_params: { key: "bar" }
+
+      assert_equal 200,   last_response.status
+      assert_equal "bar", JSON.parse(last_response.body)["key"]
+    end
+
     it "applies options for object URL" do
       @endpoint = Uppy::S3Multipart::App.new(bucket: @bucket, options: {
         object_url: { response_content_disposition: "attachment" }

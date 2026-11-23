@@ -28,7 +28,9 @@ module Uppy
       class Router < Roda
         plugin :all_verbs
         plugin :json
-        plugin :json_parser
+        JSON_CONTENT_TYPE = /\Aapplication\/json\b/i
+
+        plugin :json_parser, content_type_regexp: JSON_CONTENT_TYPE
         plugin :halt
         plugin :path_rewriter
 
@@ -36,6 +38,14 @@ module Uppy
         rewrite_path "/multipart", ""
 
         route do |r|
+          # Require JSON requests for POST endpoints. Non-JSON content types
+          # such as "text/plain" or "application/x-www-form-urlencoded" make
+          # CORS "simple" requests, which browsers send cross-origin without
+          # a preflight, so accepting them would allow CSRF.
+          if r.post? && !JSON_CONTENT_TYPE.match?(r.content_type.to_s)
+            error! "Content-Type must be application/json", status: 415
+          end
+
           # POST /s3/multipart
           r.post ["", true] do
             type     = r.params["type"]

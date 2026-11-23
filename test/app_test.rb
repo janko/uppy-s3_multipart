@@ -112,6 +112,34 @@ describe Uppy::S3Multipart::App do
       assert_equal :create_multipart_upload, @s3.api_requests[0][:operation_name]
       assert_match /^\w{32}$/,               @s3.api_requests[0][:params][:key]
     end
+
+    it "rejects non-JSON content types" do
+      [
+        "text/plain",
+        "text/plain; x=json",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data; boundary=json",
+        "application/jsonp",
+        nil,
+      ].each do |content_type|
+        header "Content-Type", content_type
+        post "/s3/multipart?filename=nature.jpg", JSON.generate({ filename: "nature.jpg" })
+
+        assert_equal 415,                last_response.status, "expected 415 for #{content_type.inspect}"
+        assert_equal "application/json", last_response.headers["Content-Type"]
+        assert_equal "Content-Type must be application/json", JSON.parse(last_response.body)["error"]
+      end
+
+      assert_empty @s3.api_requests
+    end
+
+    it "accepts JSON content type with parameters" do
+      header "Content-Type", "application/json; charset=utf-8"
+      post "/s3/multipart", JSON.generate({ type: "text/plain" })
+
+      assert_equal 200,          last_response.status
+      assert_equal "text/plain", @s3.api_requests[0][:params][:content_type]
+    end
   end
 
   describe "OPTIONS /s3/multipart/:uploadId/:partNumber" do
@@ -362,6 +390,16 @@ describe Uppy::S3Multipart::App do
       assert_equal "application/json", last_response.headers["Content-Type"]
 
       assert_equal "Missing \"key\" parameter", JSON.parse(last_response.body)["error"]
+    end
+
+    it "rejects non-JSON content types" do
+      header "Content-Type", "text/plain; x=json"
+      post "/s3/multipart/foo/complete",
+        JSON.generate({ parts: [{ PartNumber: 1, ETag: "etag1" }] }),
+        query_params: { key: "bar" }
+
+      assert_equal 415, last_response.status
+      assert_empty @s3.api_requests
     end
 
     it "returns error response when 'parts' parameter is missing" do

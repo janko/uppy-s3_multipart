@@ -34,6 +34,8 @@ describe Shrine::Plugins::UppyS3Multipart do
     @shrine.storages[:s3] = s3
     @shrine.plugin :uppy_s3_multipart
 
+    header "Content-Type", "application/json"
+
     @app = @shrine.uppy_s3_multipart(:s3)
   end
 
@@ -50,6 +52,8 @@ describe Shrine::Plugins::UppyS3Multipart do
 
   it "passes the prefix" do
     @shrine.storages[:s3] = s3(prefix: "prefix")
+    header "Content-Type", "application/json"
+
     @app = @shrine.uppy_s3_multipart(:s3)
 
     post "/multipart"
@@ -60,6 +64,8 @@ describe Shrine::Plugins::UppyS3Multipart do
 
   it "passes the public" do
     @shrine.storages[:s3] = s3(public: true)
+    header "Content-Type", "application/json"
+
     @app = @shrine.uppy_s3_multipart(:s3)
 
     post "/multipart"
@@ -72,6 +78,8 @@ describe Shrine::Plugins::UppyS3Multipart do
     @shrine.plugin :uppy_s3_multipart, options: {
       create_multipart_upload: { acl: "public-read" },
     }
+    header "Content-Type", "application/json"
+
     @app = @shrine.uppy_s3_multipart(:s3)
 
     post "/multipart"

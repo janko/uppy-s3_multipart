@@ -1,7 +1,7 @@
 # uppy-s3_multipart
 
-Provides a Rack application that implements endpoints for the [aws-s3-multipart]
-Uppy plugin. This enables multipart uploads directly to S3, which is
+Provides a Rack application that implements endpoints for multipart uploads
+with the [aws-s3] Uppy plugin. This enables multipart uploads directly to S3, which is
 recommended when dealing with large files, as it allows resuming interrupted
 uploads.
 
@@ -79,7 +79,8 @@ Rails.application.routes.draw do
 end
 ```
 
-This will add the routes that the `aws-s3-multipart` Uppy plugin expects:
+This will add the routes that the [AWS S3][aws-s3] Uppy plugin expects for
+multipart uploads when configured with `companionEndpoint`:
 
 ```
 POST   /s3/multipart
@@ -90,12 +91,14 @@ DELETE /s3/multipart/:uploadId
 ```
 
 Since your app will now play the role of Uppy Companion, in your Uppy
-configuration you can point `companionUrl` to your app's URL:
+configuration you can point `companionEndpoint` to your app's URL:
 
 ```js
-// ...
-uppy.use(Uppy.AwsS3Multipart, {
-  companionUrl: '/',
+import { AwsS3 } from "uppy"
+
+uppy.use(AwsS3, {
+  companionEndpoint: '', // requests are sent to "/s3/multipart", relative to the current host
+  shouldUseMultipart: true, // this gem only implements the multipart endpoints
 })
 ```
 
@@ -130,12 +133,14 @@ Rails.application.routes.draw do
 end
 ```
 
-Now in your Uppy configuration point `companionUrl` to your app's URL:
+Now in your Uppy configuration point `companionEndpoint` to your app's URL:
 
 ```js
-// ...
-uppy.use(Uppy.AwsS3Multipart, {
-  companionUrl: '/',
+import { AwsS3 } from "uppy"
+
+uppy.use(AwsS3, {
+  companionEndpoint: '', // requests are sent to "/s3/multipart", relative to the current host
+  shouldUseMultipart: true, // this gem only implements the multipart endpoints
 })
 ```
 
@@ -146,7 +151,7 @@ file data (this example assumes your temporary Shrine S3 storage has `prefix:
 ```js
 uppy.on('upload-success', function (file, response) {
   var uploadedFileData = JSON.stringify({
-    id: response.uploadURL.match(/\/cache\/([^\?]+)/)[1], // extract key without prefix
+    id: response.body.key.match(/^cache\/(.+)/)[1], // extract key without prefix
     storage: 'cache',
     metadata: {
       size:      file.size,
@@ -160,7 +165,7 @@ uppy.on('upload-success', function (file, response) {
 
 See [Adding Direct S3 Uploads] for an example of a complete Uppy setup with
 Shrine. From there you can swap the `presign_endpoint` + `aws-s3` code with the
-`uppy_s3_multipart` + `aws-s3-multipart` setup.
+`uppy_s3_multipart` + multipart `aws-s3` setup.
 
 Note that **Shrine won't extract metadata from directly upload files on
 assignment** by default. Instead, it will just copy metadata that was extracted
@@ -491,7 +496,7 @@ Covenant](http://contributor-covenant.org) code of conduct.
 The gem is available as open source under the terms of the [MIT
 License](https://opensource.org/licenses/MIT).
 
-[aws-s3-multipart]: https://uppy.io/docs/aws-s3-multipart/
+[aws-s3]: https://uppy.io/docs/aws-s3/
 [Shrine]: https://shrinerb.com
 [Adding Direct S3 Uploads]: https://github.com/shrinerb/shrine/wiki/Adding-Direct-S3-Uploads
 [Minio]: https://minio.io/
